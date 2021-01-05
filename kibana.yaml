@@ -7,3 +7,7 @@ spec:
   count: 1
   elasticsearchRef:
     name: wibu
+  http:
+    tls:
+      certificate:
+        secretName: mybu-kb-http-certs-internal

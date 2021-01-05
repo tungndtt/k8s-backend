@@ -65,7 +65,6 @@ type PgRestoreRequest struct {
 }
 
 // NOTE: these are ported over from legacy functionality
-
 // ShowBackupResponse ...
 // swagger:model
 type ShowBackupResponse struct {

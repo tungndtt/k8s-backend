@@ -3,47 +3,45 @@ package K8s
 import (
 	"io/ioutil"
 
-	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
 type KubeConfig struct {
-	ApiVersion     string    `json:"apiVersion"`
-	Kind           string    `json:"kind"`
-	Clusters       []Cluster `json:"clusters"`
-	Contexts       []Context `json:"contexts"`
-	CurrentContext string    `json:"current-context"`
-	Users          []User    `json:"users"`
+	ApiVersion     string    `yaml:"apiVersion"`
+	Kind           string    `yaml:"kind"`
+	Clusters       []Cluster `yaml:"clusters"`
+	Contexts       []Context `yaml:"contexts"`
+	CurrentContext string    `yaml:"current-context"`
+	Users          []User    `yaml:"users"`
 }
 
 type Cluster struct {
-	ClusterInfo ClusterInfo `json:"cluster"`
-	Name        string      `json:"name"`
+	ClusterInfo ClusterInfo `yaml:"cluster"`
+	Name        string      `yaml:"name"`
 }
 
 type ClusterInfo struct {
-	Cert      string `json:"certificate-authority"`
-	ServerUrl string `json:"server"`
+	Cert      string `yaml:"certificate-authority"`
+	ServerUrl string `yaml:"server"`
 }
 
 type Context struct {
-	ContextInfo ContextInfo `json:"context"`
-	Name        string      `json:"name"`
+	ContextInfo ContextInfo `yaml:"context"`
+	Name        string      `yaml:"name"`
 }
 
 type ContextInfo struct {
-	Cluster   string  `json:"cluster"`
-	Namespace *string `json:"namespace,omitempty"`
-	User      string  `json:"user"`
+	Cluster string `yaml:"cluster"`
+	User    string `yaml:"user"`
 }
 
 type User struct {
-	Name     string   `json:"name"`
-	UserInfo UserInfo `json:"user"`
+	Name     string   `yaml:"name"`
+	UserInfo UserInfo `yaml:"user"`
 }
 
 type UserInfo struct {
-	Token string `json:"token"`
+	Token string `yaml:"token"`
 }
 
 func GenerateKubeconfig(token, user string) error {
@@ -55,7 +53,7 @@ func GenerateKubeconfig(token, user string) error {
 				Name: "minikube",
 				ClusterInfo: ClusterInfo{
 					Cert:      "/home/tung/.minikube/ca.crt",
-					ServerUrl: "https://192.168.99.111:8443",
+					ServerUrl: "https://192.168.99.112:8443",
 				},
 			},
 		},
@@ -80,13 +78,8 @@ func GenerateKubeconfig(token, user string) error {
 	}
 	b, err := yaml.Marshal(config)
 	if err != nil {
-		logrus.Error(err)
 		return err
 	} else {
-		err = ioutil.WriteFile("kubeconfig.yaml", b, 0644)
-		if err != nil {
-			logrus.Error(err)
-		}
-		return err
+		return ioutil.WriteFile("kubeconfig.yaml", b, 0644)
 	}
 }
