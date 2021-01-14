@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
+	"time"
 
 	//"k8s.io/client-go/tools/clientcmd"
 
@@ -33,13 +35,13 @@ func main() {
 		}
 		flag.Parse()
 	*/
-	kibanaCRDTest()
+	kibanaApiTest()
 }
 
 // test kibana api
 func kibanaApiTest() {
 	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
-	k8sApi, err := api.K8sAPI(true)
+	k8sApi, err := api.K8sAPI()
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -82,7 +84,7 @@ func kibanaApiTest() {
 // test elasticsearch api
 func elasticApiTest() {
 	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
-	k8sApi, err := api.K8sAPI(true)
+	k8sApi, err := api.K8sAPI()
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -136,24 +138,6 @@ func postgresApiTest() {
 	}
 
 	fmt.Println(*resp)
-}
-
-// test LoadBalancer service create
-func lbsvcTest(namespace, name, uid string) {
-	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
-	k8sApi, err := api.K8sAPI(true)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	service, err := k8sApi.CreateLBService(metav1.CreateOptions{}, "kb", namespace, name, uid, 5601)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	fmt.Println(*service)
 }
 
 // test kibana crd tracking api
@@ -210,7 +194,7 @@ func GenerateKubeconfigTest() {
 	}
 
 	api := comm.Api{Kubeconfig: "kubeconfig.yaml"}
-	k8sApi, err := api.K8sAPI(true)
+	k8sApi, err := api.K8sAPI()
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -230,7 +214,44 @@ func GenerateKubeconfigTest() {
 
 func ScaleTest() {
 	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
-	k8sApi, _ := api.K8sAPI(true)
+	k8sApi, _ := api.K8sAPI()
 	scale, _ := k8sApi.GetStatefulSetScale(metav1.GetOptions{}, "default", "wibu-es-ganmo")
 	fmt.Println(scale)
+}
+
+func IngressTest() {
+	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
+	k8sApi, _ := api.K8sAPI()
+	ns := "default"
+	err := k8sApi.AddServiceToIngress(metav1.UpdateOptions{}, ns, ns+"-ingress", "wibu-es-http", "ganmo.com", 9200)
+	if err != nil {
+		fmt.Println(err)
+	}
+	cert, _ := ioutil.ReadFile("./serverCerts/server.crt")
+	key, _ := ioutil.ReadFile("./serverCerts/server.key")
+	_, err = k8sApi.CreateSecret(metav1.CreateOptions{}, ns, ns+"-ingress-sercret", cert, key)
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+func CreateKibanaTest() {
+	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
+	k8sApi, _ := api.K8sAPI()
+	_, err := k8sApi.ApplyFile("kibana.yaml", "apply")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	name, ns, kind := "mybu", "default", "kb"
+	svc, err := k8sApi.GetService(metav1.GetOptions{}, ns, name)
+	for svc == nil {
+		svc, err = k8sApi.GetService(metav1.GetOptions{}, ns, name)
+		time.Sleep(time.Second * 4)
+	}
+	err = k8sApi.AddServiceToIngress(metav1.UpdateOptions{}, ns, ns+"-ingress", name+"-"+kind+"-http", "ganmo.com", 5601)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 }

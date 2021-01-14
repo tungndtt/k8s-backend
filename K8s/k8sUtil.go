@@ -9,8 +9,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"bytes"
-	"net/http"
-	"os"
 	"time"
 
 	"encoding/json"
@@ -23,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/informers"
@@ -31,37 +28,19 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/tools/portforward"
-	"k8s.io/client-go/transport/spdy"
 )
 
-type K8sApi struct {
-	ClientSet *kubernetes.Clientset
-	Dif       dynamic.Interface
-	Config    *rest.Config
+func GenerateConfig(kubeconfig string) (*rest.Config, error) {
+	return clientcmd.BuildConfigFromFlags("", kubeconfig)
 }
 
-func GetClientSet(outside bool, kubeconfig string) (*kubernetes.Clientset, error, dynamic.Interface, error, *rest.Config) {
-	var err error
-	var Config *rest.Config
-	if !outside && kubeconfig == "" {
-		logrus.Info("Using inside Cluster")
-		Config, err = rest.InClusterConfig()
-	} else {
-		logrus.Info("Using outside cluster")
-		Config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
-	}
-
-	if err != nil {
-		return nil, err, nil, err, nil
-	}
-
+func GetClientSet(Config *rest.Config) (*kubernetes.Clientset, error, dynamic.Interface, error) {
 	clientSet, err1 := kubernetes.NewForConfig(Config)
 	mDynamic, err2 := dynamic.NewForConfig(Config)
 	if err1 != nil || err2 != nil {
-		return nil, err1, nil, err2, Config
+		return nil, err1, nil, err2
 	}
-	return clientSet, nil, mDynamic, nil, Config
+	return clientSet, nil, mDynamic, nil
 }
 
 // pass byte[] in param instead of filePath (because we dont save the file)
@@ -71,10 +50,14 @@ func (api *K8sApi) ApplyFile(filePath, opCode string) (*unstructured.Unstructure
 		logrus.Error(err)
 		return nil, err
 	}
+	return api.Apply(b, opCode)
+}
+
+func (api *K8sApi) Apply(b []byte, opCode string) (*unstructured.Unstructured, error) {
 	decoder := yamlutil.NewYAMLOrJSONDecoder(bytes.NewReader(b), 100)
 	for {
 		var rawObj runtime.RawExtension
-		if err = decoder.Decode(&rawObj); err != nil {
+		if err := decoder.Decode(&rawObj); err != nil {
 			return nil, err
 		}
 
@@ -179,6 +162,25 @@ func (api *K8sApi) GetStatefulSetScale(opts metav1.GetOptions, namespace, name s
 	return api.ClientSet.AppsV1().StatefulSets(namespace).GetScale(context.TODO(), name, opts)
 }
 
+func (api *K8sApi) CreateSecret(opts metav1.CreateOptions, namespace, name string, cert, key []byte) (*v1.Secret, error) {
+	new_secret := v1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Secret",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"tls.cert": cert,
+			"tls.key":  key,
+		},
+		Type: "Opaque",
+	}
+	return api.ClientSet.CoreV1().Secrets(namespace).Create(context.TODO(), &new_secret, opts)
+}
+
 func (api *K8sApi) CreateServiceAccount(opts metav1.CreateOptions, namespace, name string) (*v1.ServiceAccount, error) {
 	new := v1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
@@ -191,77 +193,6 @@ func (api *K8sApi) CreateServiceAccount(opts metav1.CreateOptions, namespace, na
 		},
 	}
 	return api.ClientSet.CoreV1().ServiceAccounts(namespace).Create(context.TODO(), &new, opts)
-}
-
-func (api *K8sApi) CreateLBService(opts metav1.CreateOptions, kind, namespace, name, uid string, port int32) (*v1.Service, error) {
-	var selector map[string]string
-	var ownerReferences []metav1.OwnerReference
-	if kind == "es" {
-		selector = map[string]string{
-			"elasticsearch.k8s.elastic.co/cluster-name": name,
-			"common.k8s.elastic.co/type":                "elasticsearch",
-		}
-		controller, blockOwnerDeletion := true, true
-		ownerReferences = []metav1.OwnerReference{
-			{
-				APIVersion:         "elasticsearch.k8s.elastic.co/v1",
-				Kind:               "Elasticsearch",
-				Name:               name,
-				UID:                types.UID(uid),
-				Controller:         &controller,
-				BlockOwnerDeletion: &blockOwnerDeletion,
-			},
-		}
-	} else if kind == "kb" {
-		selector = map[string]string{
-			"common.k8s.elastic.co/type": "kibana",
-			"kibana.k8s.elastic.co/name": name,
-		}
-		controller, blockOwnerDeletion := true, true
-		ownerReferences = []metav1.OwnerReference{
-			{
-				APIVersion:         "kibana.k8s.elastic.co/v1",
-				Kind:               "Kibana",
-				Name:               name,
-				UID:                types.UID(uid),
-				Controller:         &controller,
-				BlockOwnerDeletion: &blockOwnerDeletion,
-			},
-		}
-	} else if kind == "pg" {
-		selector = map[string]string{
-			"name":   name,
-			"vendor": "crunchydata",
-		}
-	}
-	new := v1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            name + "-service",
-			Namespace:       namespace,
-			GenerateName:    name + "-service",
-			OwnerReferences: ownerReferences,
-		},
-		Spec: v1.ServiceSpec{
-			Selector: selector,
-			Type:     "LoadBalancer",
-			Ports: []v1.ServicePort{
-				{
-					Name: name,
-					Port: port,
-					TargetPort: intstr.IntOrString{
-						Type:   0,
-						IntVal: port,
-					},
-					Protocol: "TCP",
-				},
-			},
-		},
-	}
-	return api.ClientSet.CoreV1().Services(namespace).Create(context.TODO(), &new, opts)
 }
 
 func (api *K8sApi) PollPods(namespace string) (*v1.PodList, error) {
@@ -311,25 +242,6 @@ func (api *K8sApi) UpdateScaleStatefulSet(opts metav1.UpdateOptions, namespace, 
 }
 
 // following methods maybe needed
-func (api *K8sApi) OpenPortFowarding(namespace, name string) string {
-	reqURL := api.ClientSet.CoreV1().RESTClient().Post().
-		Resource("pods").
-		Namespace(namespace).
-		Name(name).
-		SubResource("portforward").URL()
-
-	logrus.Infof("got url: %s", reqURL)
-	transport, upgrader, _ := spdy.RoundTripperFor(api.Config)
-
-	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, http.MethodPost, reqURL)
-
-	stopChan, readyChan := make(<-chan struct{}, 1), make(chan struct{}, 1)
-	out, errOut := os.Stdout, os.Stdout
-	fw, _ := portforward.New(dialer, []string{"9200:5601"}, stopChan, readyChan, out, errOut)
-	fw.ForwardPorts()
-	return reqURL.String()
-}
-
 func (api *K8sApi) WatchPods() {
 	logrus.Info("watching")
 	factory := informers.NewSharedInformerFactory(api.ClientSet, time.Second*30)

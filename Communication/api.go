@@ -11,26 +11,30 @@ type Api struct {
 	Kubeconfig string
 }
 
-func (api *Api) K8sAUTH() (*K8s.K8sAuth, error) {
-	client, err := K8s.GetRbacClient(api.Kubeconfig)
+func (api *Api) K8sAPI() (*K8s.K8sApi, error) {
+	config, err := K8s.GenerateConfig(api.Kubeconfig)
 	if err != nil {
 		return nil, err
-	} else {
-		return &K8s.K8sAuth{RbacClient: client}, nil
 	}
-}
-
-func (api *Api) K8sAPI(outside bool) (*K8s.K8sApi, error) {
-	clientset, err1, dif, err2, config := K8s.GetClientSet(outside, api.Kubeconfig)
+	clientset, err1, dif, err2 := K8s.GetClientSet(config)
 	if err1 != nil {
 		return nil, err1
 	} else if err2 != nil {
 		return nil, err2
 	} else {
+		rbacClient, err := K8s.GetRbacClient(config)
+		if err != nil {
+			return nil, err
+		}
+		v1beta1Client, err := K8s.GetV1Beta1Client(config)
+		if err != nil {
+			return nil, err
+		}
 		return &K8s.K8sApi{
-			ClientSet: clientset,
-			Dif:       dif,
-			Config:    config,
+			ClientSet:     clientset,
+			Dif:           dif,
+			RbacClient:    rbacClient,
+			V1beta1Client: v1beta1Client,
 		}, nil
 	}
 }

@@ -8,23 +8,14 @@ import (
 	rbacV1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	rbac "k8s.io/client-go/kubernetes/typed/rbac/v1"
-	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/rest"
 )
 
-type K8sAuth struct {
-	RbacClient *rbac.RbacV1Client
-}
-
-func GetRbacClient(kubeconfig string) (*rbac.RbacV1Client, error) {
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		logrus.Error(err)
-		return nil, err
-	}
+func GetRbacClient(config *rest.Config) (*rbac.RbacV1Client, error) {
 	return rbac.NewForConfig(config)
 }
 
-func (auth *K8sAuth) CreateRoleBinding(opts metav1.CreateOptions, namespace, name, rolename string, account_namespace, account_name []string) (*rbacV1.RoleBinding, error) {
+func (auth *K8sApi) CreateRoleBinding(opts metav1.CreateOptions, namespace, name, rolename string, account_namespace, account_name []string) (*rbacV1.RoleBinding, error) {
 	subjects := []rbacV1.Subject{}
 	for i := 0; i < len(account_name); i++ {
 		subjects = append(
@@ -55,7 +46,7 @@ func (auth *K8sAuth) CreateRoleBinding(opts metav1.CreateOptions, namespace, nam
 	return auth.RbacClient.RoleBindings(namespace).Create(context.TODO(), &new, opts)
 }
 
-func (auth *K8sAuth) CreateRole(opts metav1.CreateOptions, namespace, name string, apiGroups, resources, verbs [][]string) (*rbacV1.Role, error) {
+func (auth *K8sApi) CreateRole(opts metav1.CreateOptions, namespace, name string, apiGroups, resources, verbs [][]string) (*rbacV1.Role, error) {
 	rules := []rbacV1.PolicyRule{}
 	for i := 0; i < len(verbs); i++ {
 		rules = append(
@@ -81,15 +72,15 @@ func (auth *K8sAuth) CreateRole(opts metav1.CreateOptions, namespace, name strin
 	return auth.RbacClient.Roles(namespace).Create(context.TODO(), &new, opts)
 }
 
-func (auth *K8sAuth) GetRoleBinding(opts metav1.GetOptions, namespace, name string) (*rbacV1.RoleBinding, error) {
+func (auth *K8sApi) GetRoleBinding(opts metav1.GetOptions, namespace, name string) (*rbacV1.RoleBinding, error) {
 	return auth.RbacClient.RoleBindings(namespace).Get(context.TODO(), name, opts)
 }
 
-func (auth *K8sAuth) GetRole(opts metav1.GetOptions, namespace, name string) (*rbacV1.Role, error) {
+func (auth *K8sApi) GetRole(opts metav1.GetOptions, namespace, name string) (*rbacV1.Role, error) {
 	return auth.RbacClient.Roles(namespace).Get(context.TODO(), name, opts)
 }
 
-func (auth *K8sAuth) AddUserTo(opts metav1.UpdateOptions, old *rbacV1.RoleBinding, namespace, name, apiGroup string) error {
+func (auth *K8sApi) AddUserTo(opts metav1.UpdateOptions, old *rbacV1.RoleBinding, namespace, name, apiGroup string) error {
 	new := rbacV1.RoleBinding{
 		TypeMeta: old.TypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
@@ -108,13 +99,13 @@ func (auth *K8sAuth) AddUserTo(opts metav1.UpdateOptions, old *rbacV1.RoleBindin
 	return err
 }
 
-func (auth *K8sAuth) DeleteUserFrom(old *rbacV1.RoleBinding, name, namespace, kind string) error {
+func (auth *K8sApi) DeleteUserFrom(old *rbacV1.RoleBinding, name, namespace, kind string) error {
 	newSubjects := old.Subjects
 	for i, sub := range newSubjects {
 		if sub.Kind == kind && sub.Name == name && sub.Namespace == namespace {
 			n := len(newSubjects)
-			newSubjects[i], newSubjects[n-1] = newSubjects[n-1], newSubjects[i]
-			newSubjects = newSubjects[:n-1]
+			newSubjects[i] = newSubjects[n-1]
+			newSubjects = newSubjects[:n]
 			break
 		}
 	}
@@ -135,18 +126,18 @@ func (auth *K8sAuth) DeleteUserFrom(old *rbacV1.RoleBinding, name, namespace, ki
 	return err
 }
 
-func (auth *K8sAuth) DeleteRole(opts metav1.DeleteOptions, namespace, name string) error {
+func (auth *K8sApi) DeleteRole(opts metav1.DeleteOptions, namespace, name string) error {
 	return auth.RbacClient.Roles(namespace).Delete(context.TODO(), name, opts)
 }
 
-func (auth *K8sAuth) DeleteRoleBinding(opts metav1.DeleteOptions, namespace, name string) error {
+func (auth *K8sApi) DeleteRoleBinding(opts metav1.DeleteOptions, namespace, name string) error {
 	return auth.RbacClient.RoleBindings(namespace).Delete(context.TODO(), name, opts)
 }
 
-func (auth *K8sAuth) PollRoles(opts metav1.ListOptions, namespace, name string) (*rbacV1.RoleList, error) {
+func (auth *K8sApi) PollRoles(opts metav1.ListOptions, namespace, name string) (*rbacV1.RoleList, error) {
 	return auth.RbacClient.Roles(namespace).List(context.TODO(), opts)
 }
 
-func (auth *K8sAuth) PollRoleBindings(opts metav1.ListOptions, namespace, name string) (*rbacV1.RoleBindingList, error) {
+func (auth *K8sApi) PollRoleBindings(opts metav1.ListOptions, namespace, name string) (*rbacV1.RoleBindingList, error) {
 	return auth.RbacClient.RoleBindings(namespace).List(context.TODO(), opts)
 }

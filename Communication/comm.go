@@ -15,7 +15,7 @@ import (
 
 var (
 	// server host url
-	url string = "192.168.99.112"
+	url string = "ganmo.com"
 
 	// kinds
 	kb string = "kb"
@@ -25,14 +25,14 @@ var (
 
 type Comm struct {
 	Client *http.Client
-	Port   int32
+	Path   string
 }
 
 // general method to do request (curl -X <method> -u <username:password> -url <url:port/path> -d data)
 func (comm *Comm) Curl(kind, username, password, path, method string, data []byte) (*http.Response, error) {
 	req, err := http.NewRequest(
 		method,
-		fmt.Sprintf("https://%s:%s@%s:%d/%s", username, password, url, comm.Port, path),
+		fmt.Sprintf("https://%s:%s@%s/%s/%s", username, password, url, comm.Path, path),
 		bytes.NewBuffer(data),
 	)
 	if err != nil {
@@ -75,17 +75,13 @@ func getCommunication(kubeconfig, kind, namespace, name string) (*Comm, error) {
 		}
 		secretName = elastic.Spec.Http.Tls.Cert.Secret
 	}
-	k8sApi, err := api.K8sAPI(true)
+	k8sApi, err := api.K8sAPI()
 	if err != nil {
 		return nil, err
 	}
 	cert, key, err := getCert(k8sApi, kind, namespace, name, secretName)
 	if err != nil {
 		logrus.Error(err)
-		return nil, err
-	}
-	port, err := getServicePort(k8sApi, kind, namespace, name)
-	if err != nil {
 		return nil, err
 	}
 
@@ -103,9 +99,16 @@ func getCommunication(kubeconfig, kind, namespace, name string) (*Comm, error) {
 			},
 		},
 	}
+
+	var path string
+	if kind == pg {
+		path = namespace + "/postgres-operator"
+	} else if kind == kb || kind == es {
+		path = fmt.Sprintf("%s/%s-%s-http", namespace, name, kind)
+	}
 	comm := Comm{
 		Client: client,
-		Port:   port,
+		Path:   path,
 	}
 	return &comm, nil
 }
@@ -118,7 +121,7 @@ func getCert(k8sApi *K8s.K8sApi, kind, namespace, name, secretname string) ([]by
 	} else {
 		if kind == pg {
 			secret, err = k8sApi.GetSecret(metav1.GetOptions{}, namespace, "pgo.tls")
-		} else {
+		} else if kind == kb || kind == es {
 			secret, err = k8sApi.GetSecret(metav1.GetOptions{}, namespace, name+"-"+kind+"-http-certs-internal")
 		}
 	}
@@ -127,15 +130,6 @@ func getCert(k8sApi *K8s.K8sApi, kind, namespace, name, secretname string) ([]by
 		return nil, nil, err
 	}
 	return secret.Data["tls.crt"], secret.Data["tls.key"], nil
-}
-
-func getServicePort(k8sApi *K8s.K8sApi, kind, namespace, name string) (int32, error) {
-	servicename := name + "-service"
-	service, err := k8sApi.GetService(metav1.GetOptions{}, namespace, servicename)
-	if err != nil {
-		return 0, err
-	}
-	return service.Spec.Ports[0].NodePort, nil
 }
 
 func stringifyResponse(resp *http.Response, err error) (string, error) {
