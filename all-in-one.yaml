@@ -895,7 +895,7 @@ spec:
                         type: string
                     type: object
                   type: array
-              tElasticsearchype: object
+              type: object
             http:
               description: HTTP holds HTTP layer settings for Elasticsearch.
               properties:

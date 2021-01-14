@@ -8,6 +8,6 @@ spec:
   elasticsearchRef:
     name: wibu
   http:
-    tls:
-      certificate:
-        secretName: mybu-kb-http-certs-internal
+    service:
+      spec:
+        type: LoadBalancer

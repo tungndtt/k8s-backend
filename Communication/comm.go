@@ -25,13 +25,14 @@ var (
 
 type Comm struct {
 	Client *http.Client
+	Port   int32
 }
 
 // general method to do request (curl -X <method> -u <username:password> -url <url:port/path> -d data)
-func (comm *Comm) Curl(kind, username, password, path, method string, port int32, data []byte) (*http.Response, error) {
+func (comm *Comm) Curl(kind, username, password, path, method string, data []byte) (*http.Response, error) {
 	req, err := http.NewRequest(
 		method,
-		fmt.Sprintf("https://%s:%s@%s:%d/%s", username, password, url, port, path),
+		fmt.Sprintf("https://%s:%s@%s:%d/%s", username, password, url, comm.Port, path),
 		bytes.NewBuffer(data),
 	)
 	if err != nil {
@@ -49,10 +50,42 @@ func (comm *Comm) Curl(kind, username, password, path, method string, port int32
 }
 
 // create a http client, which is able to communicate with https server
-func CreateHttpClient(k8sApi *K8s.K8sApi, kind, namespace, name string) (*http.Client, error) {
-	cert, key, err := getCert(k8sApi, kind, namespace, name)
+func getCommunication(kubeconfig, kind, namespace, name string) (*Comm, error) {
+	api := Api{Kubeconfig: kubeconfig}
+	secretName := ""
+	if kind == kb {
+		kbApi, err := api.KibanaAPI()
+		if err != nil {
+			return nil, err
+		}
+		kibana, err := kbApi.Get(metav1.GetOptions{}, namespace, name)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println(kibana)
+		secretName = kibana.Spec.Http.Tls.Cert.Secret
+	} else if kind == es {
+		esApi, err := api.ElasticsearchAPI()
+		if err != nil {
+			return nil, err
+		}
+		elastic, err := esApi.Get(metav1.GetOptions{}, namespace, name)
+		if err != nil {
+			return nil, err
+		}
+		secretName = elastic.Spec.Http.Tls.Cert.Secret
+	}
+	k8sApi, err := api.K8sAPI(true)
+	if err != nil {
+		return nil, err
+	}
+	cert, key, err := getCert(k8sApi, kind, namespace, name, secretName)
 	if err != nil {
 		logrus.Error(err)
+		return nil, err
+	}
+	port, err := getServicePort(k8sApi, kind, namespace, name)
+	if err != nil {
 		return nil, err
 	}
 
@@ -70,22 +103,39 @@ func CreateHttpClient(k8sApi *K8s.K8sApi, kind, namespace, name string) (*http.C
 			},
 		},
 	}
-	return client, nil
+	comm := Comm{
+		Client: client,
+		Port:   port,
+	}
+	return &comm, nil
 }
 
-func getCert(k8sApi *K8s.K8sApi, kind, namespace, name string) ([]byte, []byte, error) {
+func getCert(k8sApi *K8s.K8sApi, kind, namespace, name, secretname string) ([]byte, []byte, error) {
 	var secret *v1.Secret
 	var err error
-	if kind == "pg" {
-		secret, err = k8sApi.GetSecret(metav1.GetOptions{}, namespace, "pgo.tls")
+	if secretname != "" {
+		secret, err = k8sApi.GetSecret(metav1.GetOptions{}, namespace, secretname)
 	} else {
-		secret, err = k8sApi.GetSecret(metav1.GetOptions{}, namespace, name+"-"+kind+"-http-certs-internal")
+		if kind == pg {
+			secret, err = k8sApi.GetSecret(metav1.GetOptions{}, namespace, "pgo.tls")
+		} else {
+			secret, err = k8sApi.GetSecret(metav1.GetOptions{}, namespace, name+"-"+kind+"-http-certs-internal")
+		}
 	}
 	if err != nil {
 		logrus.Error(err)
 		return nil, nil, err
 	}
 	return secret.Data["tls.crt"], secret.Data["tls.key"], nil
+}
+
+func getServicePort(k8sApi *K8s.K8sApi, kind, namespace, name string) (int32, error) {
+	servicename := name + "-service"
+	service, err := k8sApi.GetService(metav1.GetOptions{}, namespace, servicename)
+	if err != nil {
+		return 0, err
+	}
+	return service.Spec.Ports[0].NodePort, nil
 }
 
 func stringifyResponse(resp *http.Response, err error) (string, error) {

@@ -1,7 +1,6 @@
-package main
+package Communication
 
 import (
-	"goclient/Communication"
 	"goclient/Elasticsearch"
 	"goclient/K8s"
 	"goclient/Kibana"
@@ -69,13 +68,6 @@ func (api *Api) PostgresqlAPI() (*Postgresql.PostgresqlApi, error) {
 	}
 }
 
-func (api *Api) GetCommunication(k8sApi *K8s.K8sApi, kind, namespace, name string) (*Communication.Comm, error) {
-	client, err := Communication.CreateHttpClient(k8sApi, kind, namespace, name)
-	if err != nil {
-		return nil, err
-	} else {
-		return &Communication.Comm{
-			Client: client,
-		}, nil
-	}
+func (api *Api) GetCommunication(kind, namespace, name string) (*Comm, error) {
+	return getCommunication(api.Kubeconfig, kind, namespace, name)
 }

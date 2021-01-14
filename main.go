@@ -5,6 +5,7 @@ import (
 
 	//"k8s.io/client-go/tools/clientcmd"
 
+	comm "goclient/Communication"
 	"goclient/K8s"
 	msgs "goclient/apiservermsgs"
 
@@ -32,12 +33,12 @@ func main() {
 		}
 		flag.Parse()
 	*/
-	GenerateKubeconfigTest()
+	kibanaCRDTest()
 }
 
 // test kibana api
 func kibanaApiTest() {
-	api := Api{Kubeconfig: "/home/tung/.kube/config"}
+	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
 	k8sApi, err := api.K8sAPI(true)
 	if err != nil {
 		fmt.Println(err)
@@ -46,7 +47,7 @@ func kibanaApiTest() {
 
 	ns, name := "default", "mybu"
 
-	comm, err := api.GetCommunication(k8sApi, "kb", ns, name)
+	comm, err := api.GetCommunication("kb", ns, name)
 
 	if err != nil {
 		fmt.Println(err)
@@ -69,7 +70,7 @@ func kibanaApiTest() {
 		"disabledFeatures": ["updated"],
 		"imageUrl": ""
 	}`)
-	resp, err := comm.GetFeatures(username, password, 30928)
+	resp, err := comm.GetFeatures(username, password)
 
 	if err != nil {
 		fmt.Println(err)
@@ -80,14 +81,14 @@ func kibanaApiTest() {
 
 // test elasticsearch api
 func elasticApiTest() {
-	api := Api{Kubeconfig: "/home/tung/.kube/config"}
+	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
 	k8sApi, err := api.K8sAPI(true)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 	ns, name := "default", "wibu"
-	comm, err := api.GetCommunication(k8sApi, "es", ns, name)
+	comm, err := api.GetCommunication("es", ns, name)
 
 	if err != nil {
 		fmt.Println(err)
@@ -102,7 +103,7 @@ func elasticApiTest() {
 	username := "elastic"
 	password := string(secret.Data[username])
 
-	resp, err := comm.GetConnection(username, password, 30927)
+	resp, err := comm.GetConnection(username, password)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -112,15 +113,10 @@ func elasticApiTest() {
 
 // test postgresql api
 func postgresApiTest() {
-	api := Api{Kubeconfig: "/home/tung/.kube/config"}
-	k8sApi, err := api.K8sAPI(true)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
 
 	ns := "pgo"
-	comm, err := api.GetCommunication(k8sApi, "pg", ns, "")
+	comm, err := api.GetCommunication("pg", ns, "postgres-operator")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -132,7 +128,7 @@ func postgresApiTest() {
 		ClientVersion: "4.5.1",
 		AllFlag:       true,
 	}
-	resp, err := comm.ShowClusters(username, password, 32508, req)
+	resp, err := comm.ShowClusters(username, password, req)
 
 	if err != nil {
 		fmt.Println(err)
@@ -143,15 +139,15 @@ func postgresApiTest() {
 }
 
 // test LoadBalancer service create
-func lbsvcTest() {
-	api := Api{Kubeconfig: "/home/tung/.kube/config"}
+func lbsvcTest(namespace, name, uid string) {
+	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
 	k8sApi, err := api.K8sAPI(true)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	service, err := k8sApi.CreateLBService(metav1.CreateOptions{}, "pg", "pgo", "postgres-operator", 8443)
+	service, err := k8sApi.CreateLBService(metav1.CreateOptions{}, "kb", namespace, name, uid, 5601)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -162,13 +158,14 @@ func lbsvcTest() {
 
 // test kibana crd tracking api
 func kibanaCRDTest() {
-	api := Api{Kubeconfig: "/home/tung/.kube/config"}
+	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
 	kbApi, err := api.KibanaAPI()
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	kb, err := kbApi.Get(metav1.GetOptions{}, "default", "mybu")
+	ns, name := "default", "mybu"
+	kb, err := kbApi.Get(metav1.GetOptions{}, ns, name)
 
 	if err != nil {
 		fmt.Println(err)
@@ -179,24 +176,20 @@ func kibanaCRDTest() {
 
 // test elasticsearch crd tracking api
 func elasticCRDTest() {
-	api := Api{Kubeconfig: "/home/tung/.kube/config"}
+	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
 	esApi, err := api.ElasticsearchAPI()
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	list, err := esApi.List(metav1.ListOptions{}, "default")
+	es, err := esApi.Get(metav1.GetOptions{}, "default", "wibu")
 
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	if list.Items != nil {
-		for _, item := range list.Items {
-			fmt.Println(item)
-		}
-	}
+	fmt.Println(es)
 }
 
 func GenerateKubeconfigTest() {
@@ -216,7 +209,7 @@ func GenerateKubeconfigTest() {
 		return
 	}
 
-	api := Api{Kubeconfig: "kubeconfig.yaml"}
+	api := comm.Api{Kubeconfig: "kubeconfig.yaml"}
 	k8sApi, err := api.K8sAPI(true)
 	if err != nil {
 		fmt.Println(err)
@@ -233,4 +226,11 @@ func GenerateKubeconfigTest() {
 		fmt.Println(svc)
 	}
 
+}
+
+func ScaleTest() {
+	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
+	k8sApi, _ := api.K8sAPI(true)
+	scale, _ := k8sApi.GetStatefulSetScale(metav1.GetOptions{}, "default", "wibu-es-ganmo")
+	fmt.Println(scale)
 }

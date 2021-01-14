@@ -33,8 +33,8 @@ func parseInto(resp *http.Response, form interface{}) error {
 	}
 }
 
-func (comm *Comm) GetVersion(username, password string, port int32) (*msgs.VersionResponse, error) {
-	resp, err := comm.Curl(pg, username, password, version, "GET", port, nil)
+func (comm *Comm) GetVersion(username, password string) (*msgs.VersionResponse, error) {
+	resp, err := comm.Curl(pg, username, password, version, "GET", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -46,12 +46,12 @@ func (comm *Comm) GetVersion(username, password string, port int32) (*msgs.Versi
 // clusters
 
 // show clusters based on request
-func (comm *Comm) ShowClusters(username, password string, port int32, request msgs.ShowClusterRequest) (*msgs.ShowClusterResponse, error) {
+func (comm *Comm) ShowClusters(username, password string, request msgs.ShowClusterRequest) (*msgs.ShowClusterResponse, error) {
 	body, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := comm.Curl(pg, username, password, showclusters, "POST", port, body)
+	resp, err := comm.Curl(pg, username, password, showclusters, "POST", body)
 	if err != nil {
 		return nil, err
 	}
@@ -61,12 +61,12 @@ func (comm *Comm) ShowClusters(username, password string, port int32, request ms
 }
 
 // create cluster based on request
-func (comm *Comm) CreateClusters(username, password string, port int32, request msgs.CreateClusterRequest) (*msgs.CreateClusterResponse, error) {
+func (comm *Comm) CreateClusters(username, password string, request msgs.CreateClusterRequest) (*msgs.CreateClusterResponse, error) {
 	body, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := comm.Curl(pg, username, password, createclusters, "POST", port, body)
+	resp, err := comm.Curl(pg, username, password, createclusters, "POST", body)
 	if err != nil {
 		return nil, err
 	}
@@ -76,12 +76,12 @@ func (comm *Comm) CreateClusters(username, password string, port int32, request 
 }
 
 // update cluster based on request
-func (comm *Comm) UpdateClusters(username, password string, port int32, request msgs.UpdateClusterRequest) (*msgs.UpdateClusterResponse, error) {
+func (comm *Comm) UpdateClusters(username, password string, request msgs.UpdateClusterRequest) (*msgs.UpdateClusterResponse, error) {
 	body, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := comm.Curl(pg, username, password, updateclusters, "POST", port, body)
+	resp, err := comm.Curl(pg, username, password, updateclusters, "POST", body)
 	if err != nil {
 		return nil, err
 	}
@@ -91,12 +91,12 @@ func (comm *Comm) UpdateClusters(username, password string, port int32, request 
 }
 
 // delete cluster based on request
-func (comm *Comm) DeleteClusters(username, password string, port int32, request msgs.DeleteClusterRequest) (*msgs.DeleteClusterResponse, error) {
+func (comm *Comm) DeleteClusters(username, password string, request msgs.DeleteClusterRequest) (*msgs.DeleteClusterResponse, error) {
 	body, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := comm.Curl(pg, username, password, deleteclusters, "POST", port, body)
+	resp, err := comm.Curl(pg, username, password, deleteclusters, "POST", body)
 	if err != nil {
 		return nil, err
 	}
@@ -108,12 +108,12 @@ func (comm *Comm) DeleteClusters(username, password string, port int32, request 
 // backrest backup
 
 // create backrest backup based on request
-func (comm *Comm) CreateBackrest(username, password string, port int32, request msgs.CreateBackrestBackupRequest) (*msgs.CreateBackrestBackupResponse, error) {
+func (comm *Comm) CreateBackrest(username, password string, request msgs.CreateBackrestBackupRequest) (*msgs.CreateBackrestBackupResponse, error) {
 	body, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := comm.Curl(pg, username, password, createbackrest, "POST", port, body)
+	resp, err := comm.Curl(pg, username, password, createbackrest, "POST", body)
 	if err != nil {
 		return nil, err
 	}
@@ -123,12 +123,12 @@ func (comm *Comm) CreateBackrest(username, password string, port int32, request 
 }
 
 // delete backrest backup based on request
-func (comm *Comm) DeleteBackrest(username, password string, port int32, request msgs.DeleteBackrestBackupRequest) (*msgs.DeleteBackrestBackupResponse, error) {
+func (comm *Comm) DeleteBackrest(username, password string, request msgs.DeleteBackrestBackupRequest) (*msgs.DeleteBackrestBackupResponse, error) {
 	body, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := comm.Curl(pg, username, password, backrest, "DELETE", port, body)
+	resp, err := comm.Curl(pg, username, password, backrest, "DELETE", body)
 	if err != nil {
 		return nil, err
 	}
@@ -138,9 +138,9 @@ func (comm *Comm) DeleteBackrest(username, password string, port int32, request 
 }
 
 // show backrest backup based on request
-func (comm *Comm) ShowBackrest(username, password string, port int32, namespace, cluster_name, version, selector string) (*msgs.ShowBackrestResponse, error) {
+func (comm *Comm) ShowBackrest(username, password string, namespace, cluster_name, version, selector string) (*msgs.ShowBackrestResponse, error) {
 	path := fmt.Sprintf("%s/%s?version=%s&namespace=%s&selector=%s", backrest, cluster_name, version, namespace, selector)
-	resp, err := comm.Curl(pg, username, password, path, "GET", port, nil)
+	resp, err := comm.Curl(pg, username, password, path, "GET", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -150,12 +150,12 @@ func (comm *Comm) ShowBackrest(username, password string, port int32, namespace,
 }
 
 // restore backrest backup based on request
-func (comm *Comm) RestoreBackrest(username, password string, port int32, request msgs.RestoreRequest) (*msgs.RestoreResponse, error) {
+func (comm *Comm) RestoreBackrest(username, password string, request msgs.RestoreRequest) (*msgs.RestoreResponse, error) {
 	data, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := comm.Curl(pg, username, password, restorebackrest, "POST", port, data)
+	resp, err := comm.Curl(pg, username, password, restorebackrest, "POST", data)
 	if err != nil {
 		return nil, err
 	}
@@ -167,12 +167,12 @@ func (comm *Comm) RestoreBackrest(username, password string, port int32, request
 // pgdump backup
 
 // create dump backup based on request
-func (comm *Comm) CreatePgDumpBackup(username, password string, port int32, request msgs.CreatepgDumpBackupRequest) (*msgs.CreatepgDumpBackupResponse, error) {
+func (comm *Comm) CreatePgDumpBackup(username, password string, request msgs.CreatepgDumpBackupRequest) (*msgs.CreatepgDumpBackupResponse, error) {
 	body, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := comm.Curl(pg, username, password, createpgdump, "POST", port, body)
+	resp, err := comm.Curl(pg, username, password, createpgdump, "POST", body)
 	if err != nil {
 		return nil, err
 	}
@@ -182,9 +182,9 @@ func (comm *Comm) CreatePgDumpBackup(username, password string, port int32, requ
 }
 
 // show dump backup based on request
-func (comm *Comm) ShowPgDumpBackup(username, password string, port int32, namespace, cluster_name, version, selector string) (*msgs.ShowBackupResponse, error) {
+func (comm *Comm) ShowPgDumpBackup(username, password string, namespace, cluster_name, version, selector string) (*msgs.ShowBackupResponse, error) {
 	path := fmt.Sprintf("%s/%s?version=%s&namespace=%s&selector=%s", pgdump, cluster_name, version, namespace, selector)
-	resp, err := comm.Curl(pg, username, password, path, "GET", port, nil)
+	resp, err := comm.Curl(pg, username, password, path, "GET", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -194,12 +194,12 @@ func (comm *Comm) ShowPgDumpBackup(username, password string, port int32, namesp
 }
 
 // restore backrest backup based on request
-func (comm *Comm) RestorePgDump(username, password string, port int32, request msgs.PgRestoreRequest) (*msgs.PgRestoreResponse, error) {
+func (comm *Comm) RestorePgDump(username, password string, request msgs.PgRestoreRequest) (*msgs.PgRestoreResponse, error) {
 	data, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := comm.Curl(pg, username, password, restorepgdump, "POST", port, data)
+	resp, err := comm.Curl(pg, username, password, restorepgdump, "POST", data)
 	if err != nil {
 		return nil, err
 	}

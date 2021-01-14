@@ -3,7 +3,7 @@ kind: Elasticsearch
 metadata:
   name: wibu
 spec:
-  version: 7.10.1
+  version: 7.10.0
   nodeSets:
   - name: ganmo
     count: 1

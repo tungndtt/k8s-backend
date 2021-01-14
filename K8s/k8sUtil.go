@@ -2,7 +2,6 @@ package K8s
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 
 	"github.com/sirupsen/logrus"
@@ -17,6 +16,7 @@ import (
 	"encoding/json"
 
 	appV1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -147,43 +147,36 @@ func (api *K8sApi) ApplyFile(filePath, opCode string) (*unstructured.Unstructure
 	}
 }
 
-func (api *K8sApi) GetPod(podname, namespace string) (*v1.Pod, error) {
-	pod, err := api.ClientSet.CoreV1().Pods(namespace).Get(context.TODO(), podname, metav1.GetOptions{})
-	if err != nil {
-		logrus.Error(err)
-	} else {
-		logrus.Info(pod.TypeMeta.Kind)
-	}
-	return pod, err
+func (api *K8sApi) GetPod(opts metav1.GetOptions, namespace, podname string) (*v1.Pod, error) {
+	return api.ClientSet.CoreV1().Pods(namespace).Get(context.TODO(), podname, opts)
 }
 
-func (api *K8sApi) GetService(servicename, namespace string) (*v1.Service, error) {
-	service, err := api.ClientSet.CoreV1().Services(namespace).Get(context.TODO(), servicename, metav1.GetOptions{})
-	if err != nil {
-		logrus.Error(err)
-	} else {
-		logrus.Info(service.Spec.Type)
-	}
-	return service, err
+func (api *K8sApi) GetService(opts metav1.GetOptions, namespace, servicename string) (*v1.Service, error) {
+	return api.ClientSet.CoreV1().Services(namespace).Get(context.TODO(), servicename, opts)
 }
 
 func (api *K8sApi) GetServiceAccount(opts metav1.GetOptions, namespace, name string) (*v1.ServiceAccount, error) {
-	account, err := api.ClientSet.CoreV1().ServiceAccounts(namespace).Get(context.TODO(), name, opts)
-	if err != nil {
-		logrus.Error(err)
-		return nil, err
-	}
-	return account, err
+	return api.ClientSet.CoreV1().ServiceAccounts(namespace).Get(context.TODO(), name, opts)
+}
+
+func (api *K8sApi) GetReplicaset(opts metav1.GetOptions, namespace, name string) (*appV1.ReplicaSet, error) {
+	return api.ClientSet.AppsV1().ReplicaSets(namespace).Get(context.TODO(), name, opts)
+}
+
+func (api *K8sApi) GetStatefulset(opts metav1.GetOptions, namespace, name string) (*appV1.StatefulSet, error) {
+	return api.ClientSet.AppsV1().StatefulSets(namespace).Get(context.TODO(), name, opts)
 }
 
 func (api *K8sApi) GetSecret(opts metav1.GetOptions, namespace, name string) (*v1.Secret, error) {
-	secret, err := api.ClientSet.CoreV1().Secrets(namespace).Get(context.TODO(), name, opts)
-	if err != nil {
-		logrus.Error(err)
-		return nil, err
-	}
-	//logrus.Info("token: " + string(secret.Data["token"]))
-	return secret, err
+	return api.ClientSet.CoreV1().Secrets(namespace).Get(context.TODO(), name, opts)
+}
+
+func (api *K8sApi) GetDeploymentScale(opts metav1.GetOptions, namespace, name string) (*autoscalingv1.Scale, error) {
+	return api.ClientSet.AppsV1().Deployments(namespace).GetScale(context.TODO(), name, opts)
+}
+
+func (api *K8sApi) GetStatefulSetScale(opts metav1.GetOptions, namespace, name string) (*autoscalingv1.Scale, error) {
+	return api.ClientSet.AppsV1().StatefulSets(namespace).GetScale(context.TODO(), name, opts)
 }
 
 func (api *K8sApi) CreateServiceAccount(opts metav1.CreateOptions, namespace, name string) (*v1.ServiceAccount, error) {
@@ -197,25 +190,43 @@ func (api *K8sApi) CreateServiceAccount(opts metav1.CreateOptions, namespace, na
 			Namespace: namespace,
 		},
 	}
-	account, err := api.ClientSet.CoreV1().ServiceAccounts(namespace).Create(context.TODO(), &new, opts)
-	if err != nil {
-		logrus.Error(err)
-		return nil, err
-	}
-	return account, err
+	return api.ClientSet.CoreV1().ServiceAccounts(namespace).Create(context.TODO(), &new, opts)
 }
 
-func (api *K8sApi) CreateLBService(opts metav1.CreateOptions, kind, namespace, name string, port int32) (*v1.Service, error) {
+func (api *K8sApi) CreateLBService(opts metav1.CreateOptions, kind, namespace, name, uid string, port int32) (*v1.Service, error) {
 	var selector map[string]string
+	var ownerReferences []metav1.OwnerReference
 	if kind == "es" {
 		selector = map[string]string{
 			"elasticsearch.k8s.elastic.co/cluster-name": name,
 			"common.k8s.elastic.co/type":                "elasticsearch",
 		}
+		controller, blockOwnerDeletion := true, true
+		ownerReferences = []metav1.OwnerReference{
+			{
+				APIVersion:         "elasticsearch.k8s.elastic.co/v1",
+				Kind:               "Elasticsearch",
+				Name:               name,
+				UID:                types.UID(uid),
+				Controller:         &controller,
+				BlockOwnerDeletion: &blockOwnerDeletion,
+			},
+		}
 	} else if kind == "kb" {
 		selector = map[string]string{
 			"common.k8s.elastic.co/type": "kibana",
 			"kibana.k8s.elastic.co/name": name,
+		}
+		controller, blockOwnerDeletion := true, true
+		ownerReferences = []metav1.OwnerReference{
+			{
+				APIVersion:         "kibana.k8s.elastic.co/v1",
+				Kind:               "Kibana",
+				Name:               name,
+				UID:                types.UID(uid),
+				Controller:         &controller,
+				BlockOwnerDeletion: &blockOwnerDeletion,
+			},
 		}
 	} else if kind == "pg" {
 		selector = map[string]string{
@@ -229,9 +240,10 @@ func (api *K8sApi) CreateLBService(opts metav1.CreateOptions, kind, namespace, n
 			Kind:       "Service",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:         name + "-service",
-			Namespace:    namespace,
-			GenerateName: name + "-service",
+			Name:            name + "-service",
+			Namespace:       namespace,
+			GenerateName:    name + "-service",
+			OwnerReferences: ownerReferences,
 		},
 		Spec: v1.ServiceSpec{
 			Selector: selector,
@@ -249,89 +261,53 @@ func (api *K8sApi) CreateLBService(opts metav1.CreateOptions, kind, namespace, n
 			},
 		},
 	}
-	service, err := api.ClientSet.CoreV1().Services(namespace).Create(context.TODO(), &new, opts)
-	if err != nil {
-		logrus.Error(err)
-		return nil, err
-	}
-	return service, err
+	return api.ClientSet.CoreV1().Services(namespace).Create(context.TODO(), &new, opts)
 }
 
 func (api *K8sApi) PollPods(namespace string) (*v1.PodList, error) {
-	Pods, errPod := api.ClientSet.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
-	if errPod != nil {
-		logrus.Warnf("Failed to pool the nodes and service %v", errPod)
-		return nil, errPod
-	}
-	logrus.Infof("There are %d pods in the cluster \n", len(Pods.Items))
-	for i, s := range Pods.Items {
-		fmt.Println(s.Kind)
-		logrus.Infof("%d: Pods info of %v, in namesapce %v, api version %s", i, s.Name, s.Namespace, s.APIVersion)
-		logrus.Infof("type meta: %s", s.TypeMeta)
-		logrus.Infof("host ip: %v, podip: %v", s.Status.HostIP, s.Status.PodIPs)
-	}
-	return Pods, errPod
+	return api.ClientSet.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
 }
 
 func (api *K8sApi) PollServices(namespace string) (*v1.ServiceList, error) {
-	Services, errService := api.ClientSet.CoreV1().Services(namespace).List(context.TODO(), metav1.ListOptions{})
-	if errService != nil {
-		logrus.Warnf("Failed to pool the nodes and service %v", errService)
-		return nil, errService
-	}
-	logrus.Infof("There are %d services in the cluster \n", len(Services.Items))
-	for i, s := range Services.Items {
-		logrus.Infof("%d: Service %v cluster ip %v", i, s.Name, s.Spec.ClusterIP)
-		logrus.Infof("selector: %v", s.Spec.Selector)
-		logrus.Infof("type: %v", s.Spec.Type)
-	}
-	return Services, errService
+	return api.ClientSet.CoreV1().Services(namespace).List(context.TODO(), metav1.ListOptions{})
 }
 
-func (api *K8sApi) PollReplicaSets(namespace string) (*appV1.ReplicaSetList, error) {
-	replicasets, err := api.ClientSet.AppsV1().ReplicaSets(namespace).List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		logrus.Warnf("Failed to pool the replicaset %v", err)
-		return nil, err
-	}
-	logrus.Infof("There are %d replicaset in the cluster \n", len(replicasets.Items))
-	for i, s := range replicasets.Items {
-		logrus.Infof("%d: replicaset %v object meta %v", i, s.Name, s.ObjectMeta)
-		logrus.Infof("number of replica %d ", *s.Spec.Replicas)
-		logrus.Infof("selector %v ", s.Spec.Selector)
-	}
-	return replicasets, err
+func (api *K8sApi) PollReplicaSets(opts metav1.ListOptions, namespace string) (*appV1.ReplicaSetList, error) {
+	return api.ClientSet.AppsV1().ReplicaSets(namespace).List(context.TODO(), opts)
+}
+
+func (api *K8sApi) PollStatefulset(opts metav1.ListOptions, namespace string) (*appV1.StatefulSetList, error) {
+	return api.ClientSet.AppsV1().StatefulSets(namespace).List(context.TODO(), opts)
 }
 
 func (api *K8sApi) PollServiceAccounts(namespace string) (*v1.ServiceAccountList, error) {
-	accounts, err := api.ClientSet.CoreV1().ServiceAccounts(namespace).List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		logrus.Error(err)
-		return nil, err
-	}
-	for _, acc := range accounts.Items {
-		logrus.Info(acc.ObjectMeta.Name)
-		for _, secret := range acc.Secrets {
-			fmt.Println(secret.Name)
-		}
-	}
-	return accounts, err
+	return api.ClientSet.CoreV1().ServiceAccounts(namespace).List(context.TODO(), metav1.ListOptions{})
 }
 
 func (api *K8sApi) DeleteServiceAccount(opts metav1.DeleteOptions, namespace, name string) error {
-	err := api.ClientSet.CoreV1().ServiceAccounts(namespace).Delete(context.TODO(), name, opts)
-	if err != nil {
-		logrus.Error(err)
-	}
-	return err
+	return api.ClientSet.CoreV1().ServiceAccounts(namespace).Delete(context.TODO(), name, opts)
 }
 
 func (api *K8sApi) DeleteService(opts metav1.DeleteOptions, namespace, name string) error {
-	err := api.ClientSet.CoreV1().Services(namespace).Delete(context.TODO(), name, opts)
+	return api.ClientSet.CoreV1().Services(namespace).Delete(context.TODO(), name, opts)
+}
+
+func (api *K8sApi) UpdateScaleDeployment(opts metav1.UpdateOptions, namespace, name string, num int32) (*autoscalingv1.Scale, error) {
+	scale, err := api.GetDeploymentScale(metav1.GetOptions{}, namespace, name)
 	if err != nil {
-		logrus.Error(err)
+		return nil, err
 	}
-	return err
+	scale.Spec.Replicas = num
+	return api.ClientSet.AppsV1().Deployments(namespace).UpdateScale(context.TODO(), name, scale, opts)
+}
+
+func (api *K8sApi) UpdateScaleStatefulSet(opts metav1.UpdateOptions, namespace, name string, num int32) (*autoscalingv1.Scale, error) {
+	scale, err := api.GetStatefulSetScale(metav1.GetOptions{}, namespace, name)
+	if err != nil {
+		return nil, err
+	}
+	scale.Spec.Replicas = num
+	return api.ClientSet.AppsV1().StatefulSets(namespace).UpdateScale(context.TODO(), name, scale, opts)
 }
 
 // following methods maybe needed
