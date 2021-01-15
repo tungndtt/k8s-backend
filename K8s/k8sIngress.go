@@ -15,11 +15,11 @@ func GetV1Beta1Client(config *rest.Config) (*v1beta1.ExtensionsV1beta1Client, er
 	return v1beta1.NewForConfig(config)
 }
 
-func (api *K8sApi) GetIngress(opts metav1.GetOptions, namespace, name string) (*v1.Ingress, error) {
-	return api.V1beta1Client.Ingresses(namespace).Get(context.TODO(), name, opts)
+func (api *K8sApi) GetIngress(namespace, name string) (*v1.Ingress, error) {
+	return api.V1beta1Client.Ingresses(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }
 
-func (api *K8sApi) CreateIngress(opts metav1.CreateOptions, namespace, ingressName, serviceName, hostname string, servicePort int32) (*v1.Ingress, error) {
+func (api *K8sApi) CreateIngress(namespace, ingressName, serviceName, hostname string, servicePort int32) (*v1.Ingress, error) {
 	new_ingress := v1.Ingress{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Ingress",
@@ -65,13 +65,13 @@ func (api *K8sApi) CreateIngress(opts metav1.CreateOptions, namespace, ingressNa
 			},
 		},
 	}
-	return api.V1beta1Client.Ingresses(namespace).Create(context.TODO(), &new_ingress, opts)
+	return api.V1beta1Client.Ingresses(namespace).Create(context.TODO(), &new_ingress, metav1.CreateOptions{})
 }
 
-func (api *K8sApi) AddServiceToIngress(opts metav1.UpdateOptions, namespace, ingressName, serviceName, hostname string, servicePort int32) error {
-	ingress, err := api.GetIngress(metav1.GetOptions{}, namespace, ingressName)
+func (api *K8sApi) AddServiceToIngress(namespace, ingressName, serviceName, hostname string, servicePort int32) error {
+	ingress, err := api.GetIngress(namespace, ingressName)
 	if err != nil {
-		_, err = api.CreateIngress(metav1.CreateOptions{}, namespace, ingressName, serviceName, hostname, servicePort)
+		_, err = api.CreateIngress(namespace, ingressName, serviceName, hostname, servicePort)
 		return err
 	}
 	existing := api.ExistingServiceInIngress(ingress, serviceName)
@@ -87,13 +87,13 @@ func (api *K8sApi) AddServiceToIngress(opts metav1.UpdateOptions, namespace, ing
 			},
 		}
 		ingress.Spec.Rules[0].HTTP.Paths = append(ingress.Spec.Rules[0].HTTP.Paths, new_path)
-		_, err = api.V1beta1Client.Ingresses(namespace).Update(context.TODO(), ingress, opts)
+		_, err = api.V1beta1Client.Ingresses(namespace).Update(context.TODO(), ingress, metav1.UpdateOptions{})
 	}
 	return err
 }
 
-func (api *K8sApi) DeleteServiceFromIngress(opts metav1.UpdateOptions, namespace, ingressName, serviceName string) error {
-	ingress, err := api.GetIngress(metav1.GetOptions{}, namespace, ingressName)
+func (api *K8sApi) DeleteServiceFromIngress(namespace, ingressName, serviceName string) error {
+	ingress, err := api.GetIngress(namespace, ingressName)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func (api *K8sApi) DeleteServiceFromIngress(opts metav1.UpdateOptions, namespace
 			}
 		}
 		fmt.Println(ingress.Spec.Rules[0].HTTP.Paths)
-		_, err = api.V1beta1Client.Ingresses(namespace).Update(context.TODO(), ingress, opts)
+		_, err = api.V1beta1Client.Ingresses(namespace).Update(context.TODO(), ingress, metav1.UpdateOptions{})
 	} else if l == 1 {
 		err = api.V1beta1Client.Ingresses(namespace).Delete(context.TODO(), ingressName, metav1.DeleteOptions{})
 	}

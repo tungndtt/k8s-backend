@@ -36,34 +36,34 @@ func NewConfigFor(kubeconfig string) (*rest.RESTClient, error) {
 	return rest.UnversionedRESTClientFor(&crdConfig)
 }
 
-func (api *KibanaApi) Get(opts metav1.GetOptions, namespace, name string) (*Kibana, error) {
+func (api *KibanaApi) Get(namespace, name string) (*Kibana, error) {
 	result := Kibana{}
 	e := api.Client.Get().
 		Namespace(namespace).
 		Resource("kibanas").
 		Name(name).
-		VersionedParams(&opts, scheme.ParameterCodec).
+		VersionedParams(&metav1.GetOptions{}, scheme.ParameterCodec).
 		Do(context.TODO()).
 		Into(&result)
 	return &result, e
 }
 
-func (api *KibanaApi) List(opts metav1.ListOptions, namespace string) (*KibanaList, error) {
+func (api *KibanaApi) List(namespace string) (*KibanaList, error) {
 	result := KibanaList{}
 	e := api.Client.Get().
 		Namespace(namespace).
 		Resource("kibanas").
-		VersionedParams(&opts, scheme.ParameterCodec).
+		VersionedParams(&metav1.ListOptions{}, scheme.ParameterCodec).
 		Do(context.TODO()).
 		Into(&result)
 	return &result, e
 }
 
-func (api *KibanaApi) Delete(opts metav1.DeleteOptions, namespace, name string) error {
+func (api *KibanaApi) Delete(namespace, name string) error {
 	err := api.Client.Delete().
 		Namespace(namespace).
 		Resource("kibanas").
-		VersionedParams(&opts, scheme.ParameterCodec).
+		VersionedParams(&metav1.DeleteOptions{}, scheme.ParameterCodec).
 		Name(name).
 		Do(context.TODO()).Error()
 	return err
@@ -88,7 +88,7 @@ func (api *KibanaApi) WatchResources(namespace string) cache.Store {
 	kbStore, kbController := cache.NewInformer(
 		&cache.ListWatch{
 			ListFunc: func(lo metav1.ListOptions) (result runtime.Object, err error) {
-				return api.List(lo, namespace)
+				return api.List(namespace)
 			},
 			WatchFunc: func(lo metav1.ListOptions) (watch.Interface, error) {
 				return api.Watch(lo, namespace)

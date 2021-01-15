@@ -130,39 +130,39 @@ func (api *K8sApi) Apply(b []byte, opCode string) (*unstructured.Unstructured, e
 	}
 }
 
-func (api *K8sApi) GetPod(opts metav1.GetOptions, namespace, podname string) (*v1.Pod, error) {
-	return api.ClientSet.CoreV1().Pods(namespace).Get(context.TODO(), podname, opts)
+func (api *K8sApi) GetPod(namespace, podname string) (*v1.Pod, error) {
+	return api.ClientSet.CoreV1().Pods(namespace).Get(context.TODO(), podname, metav1.GetOptions{})
 }
 
-func (api *K8sApi) GetService(opts metav1.GetOptions, namespace, servicename string) (*v1.Service, error) {
-	return api.ClientSet.CoreV1().Services(namespace).Get(context.TODO(), servicename, opts)
+func (api *K8sApi) GetService(namespace, servicename string) (*v1.Service, error) {
+	return api.ClientSet.CoreV1().Services(namespace).Get(context.TODO(), servicename, metav1.GetOptions{})
 }
 
-func (api *K8sApi) GetServiceAccount(opts metav1.GetOptions, namespace, name string) (*v1.ServiceAccount, error) {
-	return api.ClientSet.CoreV1().ServiceAccounts(namespace).Get(context.TODO(), name, opts)
+func (api *K8sApi) GetServiceAccount(namespace, name string) (*v1.ServiceAccount, error) {
+	return api.ClientSet.CoreV1().ServiceAccounts(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }
 
-func (api *K8sApi) GetReplicaset(opts metav1.GetOptions, namespace, name string) (*appV1.ReplicaSet, error) {
-	return api.ClientSet.AppsV1().ReplicaSets(namespace).Get(context.TODO(), name, opts)
+func (api *K8sApi) GetReplicaset(namespace, name string) (*appV1.ReplicaSet, error) {
+	return api.ClientSet.AppsV1().ReplicaSets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }
 
-func (api *K8sApi) GetStatefulset(opts metav1.GetOptions, namespace, name string) (*appV1.StatefulSet, error) {
-	return api.ClientSet.AppsV1().StatefulSets(namespace).Get(context.TODO(), name, opts)
+func (api *K8sApi) GetStatefulset(namespace, name string) (*appV1.StatefulSet, error) {
+	return api.ClientSet.AppsV1().StatefulSets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }
 
-func (api *K8sApi) GetSecret(opts metav1.GetOptions, namespace, name string) (*v1.Secret, error) {
-	return api.ClientSet.CoreV1().Secrets(namespace).Get(context.TODO(), name, opts)
+func (api *K8sApi) GetSecret(namespace, name string) (*v1.Secret, error) {
+	return api.ClientSet.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }
 
-func (api *K8sApi) GetDeploymentScale(opts metav1.GetOptions, namespace, name string) (*autoscalingv1.Scale, error) {
-	return api.ClientSet.AppsV1().Deployments(namespace).GetScale(context.TODO(), name, opts)
+func (api *K8sApi) GetDeploymentScale(namespace, name string) (*autoscalingv1.Scale, error) {
+	return api.ClientSet.AppsV1().Deployments(namespace).GetScale(context.TODO(), name, metav1.GetOptions{})
 }
 
-func (api *K8sApi) GetStatefulSetScale(opts metav1.GetOptions, namespace, name string) (*autoscalingv1.Scale, error) {
-	return api.ClientSet.AppsV1().StatefulSets(namespace).GetScale(context.TODO(), name, opts)
+func (api *K8sApi) GetStatefulSetScale(namespace, name string) (*autoscalingv1.Scale, error) {
+	return api.ClientSet.AppsV1().StatefulSets(namespace).GetScale(context.TODO(), name, metav1.GetOptions{})
 }
 
-func (api *K8sApi) CreateSecret(opts metav1.CreateOptions, namespace, name string, cert, key []byte) (*v1.Secret, error) {
+func (api *K8sApi) CreateSecret(namespace, name string, cert, key []byte) (*v1.Secret, error) {
 	new_secret := v1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Secret",
@@ -178,10 +178,10 @@ func (api *K8sApi) CreateSecret(opts metav1.CreateOptions, namespace, name strin
 		},
 		Type: "Opaque",
 	}
-	return api.ClientSet.CoreV1().Secrets(namespace).Create(context.TODO(), &new_secret, opts)
+	return api.ClientSet.CoreV1().Secrets(namespace).Create(context.TODO(), &new_secret, metav1.CreateOptions{})
 }
 
-func (api *K8sApi) CreateServiceAccount(opts metav1.CreateOptions, namespace, name string) (*v1.ServiceAccount, error) {
+func (api *K8sApi) CreateServiceAccount(namespace, name string) (*v1.ServiceAccount, error) {
 	new := v1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ServiceAccount",
@@ -192,7 +192,7 @@ func (api *K8sApi) CreateServiceAccount(opts metav1.CreateOptions, namespace, na
 			Namespace: namespace,
 		},
 	}
-	return api.ClientSet.CoreV1().ServiceAccounts(namespace).Create(context.TODO(), &new, opts)
+	return api.ClientSet.CoreV1().ServiceAccounts(namespace).Create(context.TODO(), &new, metav1.CreateOptions{})
 }
 
 func (api *K8sApi) PollPods(namespace string) (*v1.PodList, error) {
@@ -203,42 +203,42 @@ func (api *K8sApi) PollServices(namespace string) (*v1.ServiceList, error) {
 	return api.ClientSet.CoreV1().Services(namespace).List(context.TODO(), metav1.ListOptions{})
 }
 
-func (api *K8sApi) PollReplicaSets(opts metav1.ListOptions, namespace string) (*appV1.ReplicaSetList, error) {
-	return api.ClientSet.AppsV1().ReplicaSets(namespace).List(context.TODO(), opts)
+func (api *K8sApi) PollReplicaSets(namespace string) (*appV1.ReplicaSetList, error) {
+	return api.ClientSet.AppsV1().ReplicaSets(namespace).List(context.TODO(), metav1.ListOptions{})
 }
 
 func (api *K8sApi) PollStatefulset(opts metav1.ListOptions, namespace string) (*appV1.StatefulSetList, error) {
-	return api.ClientSet.AppsV1().StatefulSets(namespace).List(context.TODO(), opts)
+	return api.ClientSet.AppsV1().StatefulSets(namespace).List(context.TODO(), metav1.ListOptions{})
 }
 
 func (api *K8sApi) PollServiceAccounts(namespace string) (*v1.ServiceAccountList, error) {
 	return api.ClientSet.CoreV1().ServiceAccounts(namespace).List(context.TODO(), metav1.ListOptions{})
 }
 
-func (api *K8sApi) DeleteServiceAccount(opts metav1.DeleteOptions, namespace, name string) error {
-	return api.ClientSet.CoreV1().ServiceAccounts(namespace).Delete(context.TODO(), name, opts)
+func (api *K8sApi) DeleteServiceAccount(namespace, name string) error {
+	return api.ClientSet.CoreV1().ServiceAccounts(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
 
-func (api *K8sApi) DeleteService(opts metav1.DeleteOptions, namespace, name string) error {
-	return api.ClientSet.CoreV1().Services(namespace).Delete(context.TODO(), name, opts)
+func (api *K8sApi) DeleteService(namespace, name string) error {
+	return api.ClientSet.CoreV1().Services(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 }
 
-func (api *K8sApi) UpdateScaleDeployment(opts metav1.UpdateOptions, namespace, name string, num int32) (*autoscalingv1.Scale, error) {
-	scale, err := api.GetDeploymentScale(metav1.GetOptions{}, namespace, name)
+func (api *K8sApi) UpdateScaleDeployment(namespace, name string, num int32) (*autoscalingv1.Scale, error) {
+	scale, err := api.GetDeploymentScale(namespace, name)
 	if err != nil {
 		return nil, err
 	}
 	scale.Spec.Replicas = num
-	return api.ClientSet.AppsV1().Deployments(namespace).UpdateScale(context.TODO(), name, scale, opts)
+	return api.ClientSet.AppsV1().Deployments(namespace).UpdateScale(context.TODO(), name, scale, metav1.UpdateOptions{})
 }
 
-func (api *K8sApi) UpdateScaleStatefulSet(opts metav1.UpdateOptions, namespace, name string, num int32) (*autoscalingv1.Scale, error) {
-	scale, err := api.GetStatefulSetScale(metav1.GetOptions{}, namespace, name)
+func (api *K8sApi) UpdateScaleStatefulSet(namespace, name string, num int32) (*autoscalingv1.Scale, error) {
+	scale, err := api.GetStatefulSetScale(namespace, name)
 	if err != nil {
 		return nil, err
 	}
 	scale.Spec.Replicas = num
-	return api.ClientSet.AppsV1().StatefulSets(namespace).UpdateScale(context.TODO(), name, scale, opts)
+	return api.ClientSet.AppsV1().StatefulSets(namespace).UpdateScale(context.TODO(), name, scale, metav1.UpdateOptions{})
 }
 
 // following methods maybe needed

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	msgs "goclient/apiservermsgs"
+	structs "goclient/RestStruct/Postgres/structs"
 )
 
 var (
@@ -17,6 +17,7 @@ var (
 	deleteclusters  string = "clustersdelete"
 	createbackrest  string = "backrestbackup"
 	backrest        string = "backrest"
+	showBackup      string = "%s/%s?version=%s&namespace=%s&selector=%s"
 	createpgdump    string = "pgdumpbackup"
 	pgdump          string = "pgdump"
 	restorebackrest string = "restore"
@@ -33,12 +34,12 @@ func parseInto(resp *http.Response, form interface{}) error {
 	}
 }
 
-func (comm *Comm) GetVersion(username, password string) (*msgs.VersionResponse, error) {
+func (comm *Comm) GetVersion(username, password string) (*structs.VersionResponse, error) {
 	resp, err := comm.Curl(pg, username, password, version, "GET", nil)
 	if err != nil {
 		return nil, err
 	}
-	var res msgs.VersionResponse
+	var res structs.VersionResponse
 	err = parseInto(resp, &res)
 	return &res, err
 }
@@ -46,7 +47,7 @@ func (comm *Comm) GetVersion(username, password string) (*msgs.VersionResponse, 
 // clusters
 
 // show clusters based on request
-func (comm *Comm) ShowClusters(username, password string, request msgs.ShowClusterRequest) (*msgs.ShowClusterResponse, error) {
+func (comm *Comm) ShowClusters(username, password string, request structs.ShowClusterRequest) (*structs.ShowClusterResponse, error) {
 	body, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
@@ -55,13 +56,13 @@ func (comm *Comm) ShowClusters(username, password string, request msgs.ShowClust
 	if err != nil {
 		return nil, err
 	}
-	var res msgs.ShowClusterResponse
+	var res structs.ShowClusterResponse
 	err = parseInto(resp, &res)
 	return &res, err
 }
 
 // create cluster based on request
-func (comm *Comm) CreateClusters(username, password string, request msgs.CreateClusterRequest) (*msgs.CreateClusterResponse, error) {
+func (comm *Comm) CreateClusters(username, password string, request structs.CreateClusterRequest) (*structs.CreateClusterResponse, error) {
 	body, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
@@ -70,13 +71,13 @@ func (comm *Comm) CreateClusters(username, password string, request msgs.CreateC
 	if err != nil {
 		return nil, err
 	}
-	var res msgs.CreateClusterResponse
+	var res structs.CreateClusterResponse
 	err = parseInto(resp, &res)
 	return &res, err
 }
 
 // update cluster based on request
-func (comm *Comm) UpdateClusters(username, password string, request msgs.UpdateClusterRequest) (*msgs.UpdateClusterResponse, error) {
+func (comm *Comm) UpdateClusters(username, password string, request structs.UpdateClusterRequest) (*structs.UpdateClusterResponse, error) {
 	body, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
@@ -85,13 +86,13 @@ func (comm *Comm) UpdateClusters(username, password string, request msgs.UpdateC
 	if err != nil {
 		return nil, err
 	}
-	var res msgs.UpdateClusterResponse
+	var res structs.UpdateClusterResponse
 	err = parseInto(resp, &res)
 	return &res, err
 }
 
 // delete cluster based on request
-func (comm *Comm) DeleteClusters(username, password string, request msgs.DeleteClusterRequest) (*msgs.DeleteClusterResponse, error) {
+func (comm *Comm) DeleteClusters(username, password string, request structs.DeleteClusterRequest) (*structs.DeleteClusterResponse, error) {
 	body, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
@@ -100,7 +101,7 @@ func (comm *Comm) DeleteClusters(username, password string, request msgs.DeleteC
 	if err != nil {
 		return nil, err
 	}
-	var res msgs.DeleteClusterResponse
+	var res structs.DeleteClusterResponse
 	err = parseInto(resp, &res)
 	return &res, err
 }
@@ -108,7 +109,7 @@ func (comm *Comm) DeleteClusters(username, password string, request msgs.DeleteC
 // backrest backup
 
 // create backrest backup based on request
-func (comm *Comm) CreateBackrest(username, password string, request msgs.CreateBackrestBackupRequest) (*msgs.CreateBackrestBackupResponse, error) {
+func (comm *Comm) CreateBackrest(username, password string, request structs.CreateBackrestBackupRequest) (*structs.CreateBackrestBackupResponse, error) {
 	body, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
@@ -117,13 +118,13 @@ func (comm *Comm) CreateBackrest(username, password string, request msgs.CreateB
 	if err != nil {
 		return nil, err
 	}
-	var res msgs.CreateBackrestBackupResponse
+	var res structs.CreateBackrestBackupResponse
 	err = parseInto(resp, &res)
 	return &res, err
 }
 
 // delete backrest backup based on request
-func (comm *Comm) DeleteBackrest(username, password string, request msgs.DeleteBackrestBackupRequest) (*msgs.DeleteBackrestBackupResponse, error) {
+func (comm *Comm) DeleteBackrest(username, password string, request structs.DeleteBackrestBackupRequest) (*structs.DeleteBackrestBackupResponse, error) {
 	body, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
@@ -132,25 +133,25 @@ func (comm *Comm) DeleteBackrest(username, password string, request msgs.DeleteB
 	if err != nil {
 		return nil, err
 	}
-	var res msgs.DeleteBackrestBackupResponse
+	var res structs.DeleteBackrestBackupResponse
 	err = parseInto(resp, &res)
 	return &res, err
 }
 
 // show backrest backup based on request
-func (comm *Comm) ShowBackrest(username, password string, namespace, cluster_name, version, selector string) (*msgs.ShowBackrestResponse, error) {
-	path := fmt.Sprintf("%s/%s?version=%s&namespace=%s&selector=%s", backrest, cluster_name, version, namespace, selector)
+func (comm *Comm) ShowBackrest(username, password string, namespace, cluster_name, version, selector string) (*structs.ShowBackrestResponse, error) {
+	path := fmt.Sprintf(showBackup, backrest, cluster_name, version, namespace, selector)
 	resp, err := comm.Curl(pg, username, password, path, "GET", nil)
 	if err != nil {
 		return nil, err
 	}
-	var res msgs.ShowBackrestResponse
+	var res structs.ShowBackrestResponse
 	err = parseInto(resp, &res)
 	return &res, err
 }
 
 // restore backrest backup based on request
-func (comm *Comm) RestoreBackrest(username, password string, request msgs.RestoreRequest) (*msgs.RestoreResponse, error) {
+func (comm *Comm) RestoreBackrest(username, password string, request structs.RestoreRequest) (*structs.RestoreResponse, error) {
 	data, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
@@ -159,7 +160,7 @@ func (comm *Comm) RestoreBackrest(username, password string, request msgs.Restor
 	if err != nil {
 		return nil, err
 	}
-	var res msgs.RestoreResponse
+	var res structs.RestoreResponse
 	err = parseInto(resp, &res)
 	return &res, err
 }
@@ -167,7 +168,7 @@ func (comm *Comm) RestoreBackrest(username, password string, request msgs.Restor
 // pgdump backup
 
 // create dump backup based on request
-func (comm *Comm) CreatePgDumpBackup(username, password string, request msgs.CreatepgDumpBackupRequest) (*msgs.CreatepgDumpBackupResponse, error) {
+func (comm *Comm) CreatePgDumpBackup(username, password string, request structs.CreatepgDumpBackupRequest) (*structs.CreatepgDumpBackupResponse, error) {
 	body, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
@@ -176,25 +177,25 @@ func (comm *Comm) CreatePgDumpBackup(username, password string, request msgs.Cre
 	if err != nil {
 		return nil, err
 	}
-	var res msgs.CreatepgDumpBackupResponse
+	var res structs.CreatepgDumpBackupResponse
 	err = parseInto(resp, &res)
 	return &res, err
 }
 
 // show dump backup based on request
-func (comm *Comm) ShowPgDumpBackup(username, password string, namespace, cluster_name, version, selector string) (*msgs.ShowBackupResponse, error) {
-	path := fmt.Sprintf("%s/%s?version=%s&namespace=%s&selector=%s", pgdump, cluster_name, version, namespace, selector)
+func (comm *Comm) ShowPgDumpBackup(username, password string, namespace, cluster_name, version, selector string) (*structs.ShowBackupResponse, error) {
+	path := fmt.Sprintf(showBackup, pgdump, cluster_name, version, namespace, selector)
 	resp, err := comm.Curl(pg, username, password, path, "GET", nil)
 	if err != nil {
 		return nil, err
 	}
-	var res msgs.ShowBackupResponse
+	var res structs.ShowBackupResponse
 	err = parseInto(resp, &res)
 	return &res, err
 }
 
 // restore backrest backup based on request
-func (comm *Comm) RestorePgDump(username, password string, request msgs.PgRestoreRequest) (*msgs.PgRestoreResponse, error) {
+func (comm *Comm) RestorePgDump(username, password string, request structs.PgRestoreRequest) (*structs.PgRestoreResponse, error) {
 	data, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
@@ -203,7 +204,7 @@ func (comm *Comm) RestorePgDump(username, password string, request msgs.PgRestor
 	if err != nil {
 		return nil, err
 	}
-	var res msgs.PgRestoreResponse
+	var res structs.PgRestoreResponse
 	err = parseInto(resp, &res)
 	return &res, err
 }

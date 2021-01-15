@@ -7,7 +7,3 @@ spec:
   count: 1
   elasticsearchRef:
     name: wibu
-  http:
-    service:
-      spec:
-        type: LoadBalancer

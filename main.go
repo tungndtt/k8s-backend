@@ -1,26 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"time"
 
-	//"k8s.io/client-go/tools/clientcmd"
-
 	comm "goclient/Communication"
 	"goclient/K8s"
-	msgs "goclient/apiservermsgs"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	//
-	// Uncomment to load all auth plugins
-	// _ "k8s.io/client-go/plugin/pkg/client/auth"
-	//
-	// Or uncomment to load specific auth plugins
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/azure"
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/openstack"
+	"goclient/RestStruct/Postgres/structs"
 )
 
 func main() {
@@ -35,7 +23,7 @@ func main() {
 		}
 		flag.Parse()
 	*/
-	kibanaApiTest()
+	kibanaCRDTest()
 }
 
 // test kibana api
@@ -56,7 +44,7 @@ func kibanaApiTest() {
 		return
 	}
 
-	secret, err := k8sApi.GetSecret(metav1.GetOptions{}, ns, "wibu-es-elastic-user")
+	secret, err := k8sApi.GetSecret(ns, "wibu-es-elastic-user")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -72,7 +60,7 @@ func kibanaApiTest() {
 		"disabledFeatures": ["updated"],
 		"imageUrl": ""
 	}`)
-	resp, err := comm.GetFeatures(username, password)
+	resp, err := comm.GetSpace(username, password, "marketing")
 
 	if err != nil {
 		fmt.Println(err)
@@ -97,7 +85,7 @@ func elasticApiTest() {
 		return
 	}
 
-	secret, err := k8sApi.GetSecret(metav1.GetOptions{}, ns, "wibu-es-elastic-user")
+	secret, err := k8sApi.GetSecret(ns, "wibu-es-elastic-user")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -125,7 +113,7 @@ func postgresApiTest() {
 	}
 
 	username, password := "admin", "examplepassword"
-	req := msgs.ShowClusterRequest{
+	req := structs.ShowClusterRequest{
 		Namespace:     "pgo",
 		ClientVersion: "4.5.1",
 		AllFlag:       true,
@@ -149,13 +137,18 @@ func kibanaCRDTest() {
 		return
 	}
 	ns, name := "default", "mybu"
-	kb, err := kbApi.Get(metav1.GetOptions{}, ns, name)
+	kb, err := kbApi.Get(ns, name)
 
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println(kb)
+	b, err := json.Marshal(kb)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	ioutil.WriteFile("./files/tmp.json", b, 0644)
 }
 
 // test elasticsearch crd tracking api
@@ -166,7 +159,7 @@ func elasticCRDTest() {
 		fmt.Println(err)
 		return
 	}
-	es, err := esApi.Get(metav1.GetOptions{}, "default", "wibu")
+	es, err := esApi.Get("default", "wibu")
 
 	if err != nil {
 		fmt.Println(err)
@@ -215,7 +208,7 @@ func GenerateKubeconfigTest() {
 func ScaleTest() {
 	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
 	k8sApi, _ := api.K8sAPI()
-	scale, _ := k8sApi.GetStatefulSetScale(metav1.GetOptions{}, "default", "wibu-es-ganmo")
+	scale, _ := k8sApi.GetStatefulSetScale("default", "wibu-es-ganmo")
 	fmt.Println(scale)
 }
 
@@ -223,13 +216,13 @@ func IngressTest() {
 	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
 	k8sApi, _ := api.K8sAPI()
 	ns := "default"
-	err := k8sApi.AddServiceToIngress(metav1.UpdateOptions{}, ns, ns+"-ingress", "wibu-es-http", "ganmo.com", 9200)
+	err := k8sApi.AddServiceToIngress(ns, ns+"-ingress", "wibu-es-http", "ganmo.com", 9200)
 	if err != nil {
 		fmt.Println(err)
 	}
 	cert, _ := ioutil.ReadFile("./serverCerts/server.crt")
 	key, _ := ioutil.ReadFile("./serverCerts/server.key")
-	_, err = k8sApi.CreateSecret(metav1.CreateOptions{}, ns, ns+"-ingress-sercret", cert, key)
+	_, err = k8sApi.CreateSecret(ns, ns+"-ingress-sercret", cert, key)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -244,12 +237,12 @@ func CreateKibanaTest() {
 		return
 	}
 	name, ns, kind := "mybu", "default", "kb"
-	svc, err := k8sApi.GetService(metav1.GetOptions{}, ns, name)
+	svc, err := k8sApi.GetService(ns, name)
 	for svc == nil {
-		svc, err = k8sApi.GetService(metav1.GetOptions{}, ns, name)
+		svc, err = k8sApi.GetService(ns, name)
 		time.Sleep(time.Second * 4)
 	}
-	err = k8sApi.AddServiceToIngress(metav1.UpdateOptions{}, ns, ns+"-ingress", name+"-"+kind+"-http", "ganmo.com", 5601)
+	err = k8sApi.AddServiceToIngress(ns, ns+"-ingress", name+"-"+kind+"-http", "ganmo.com", 5601)
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -34,136 +34,136 @@ func NewConfigFor(kubeconfig string) (*rest.RESTClient, error) {
 // methods of PostgresqlApi struct ...
 
 // clusters
-func (api *PostgresqlApi) GetCluster(opts metav1.GetOptions, namespace, name string) (*Pgcluster, error) {
+func (api *PostgresqlApi) GetCluster(namespace, name string) (*Pgcluster, error) {
 	result := Pgcluster{}
 	e := api.Client.Get().
 		Namespace(namespace).
 		Resource(PgclusterResourcePlural).
 		Name(name).
-		VersionedParams(&opts, scheme.ParameterCodec).
+		VersionedParams(&metav1.GetOptions{}, scheme.ParameterCodec).
 		Do(context.TODO()).
 		Into(&result)
 	return &result, e
 }
 
-func (api *PostgresqlApi) ListCluster(opts metav1.ListOptions, namespace string) (*PgclusterList, error) {
+func (api *PostgresqlApi) ListCluster(namespace string) (*PgclusterList, error) {
 	result := PgclusterList{}
 	e := api.Client.Get().
 		Namespace(namespace).
 		Resource(PgclusterResourcePlural).
-		VersionedParams(&opts, scheme.ParameterCodec).
+		VersionedParams(&metav1.ListOptions{}, scheme.ParameterCodec).
 		Do(context.TODO()).
 		Into(&result)
 	return &result, e
 }
 
-func (api *PostgresqlApi) DeleteCluster(opts metav1.DeleteOptions, namespace, name string) error {
+func (api *PostgresqlApi) DeleteCluster(namespace, name string) error {
 	err := api.Client.Delete().
 		Namespace(namespace).
 		Resource(PgclusterResourcePlural).
-		VersionedParams(&opts, scheme.ParameterCodec).
+		VersionedParams(&metav1.DeleteOptions{}, scheme.ParameterCodec).
 		Name(name).
 		Do(context.TODO()).Error()
 	return err
 }
 
 // policies
-func (api *PostgresqlApi) GetPolicy(opts metav1.GetOptions, namespace, name string) (*Pgpolicy, error) {
+func (api *PostgresqlApi) GetPolicy(namespace, name string) (*Pgpolicy, error) {
 	result := Pgpolicy{}
 	e := api.Client.Get().
 		Namespace(namespace).
 		Resource(PgpolicyResourcePlural).
 		Name(name).
-		VersionedParams(&opts, scheme.ParameterCodec).
+		VersionedParams(&metav1.GetOptions{}, scheme.ParameterCodec).
 		Do(context.TODO()).
 		Into(&result)
 	return &result, e
 }
 
-func (api *PostgresqlApi) ListPolicy(opts metav1.ListOptions, namespace string) (*PgpolicyList, error) {
+func (api *PostgresqlApi) ListPolicy(namespace string) (*PgpolicyList, error) {
 	result := PgpolicyList{}
 	e := api.Client.Get().
 		Namespace(namespace).
 		Resource(PgpolicyResourcePlural).
-		VersionedParams(&opts, scheme.ParameterCodec).
+		VersionedParams(&metav1.ListOptions{}, scheme.ParameterCodec).
 		Do(context.TODO()).
 		Into(&result)
 	return &result, e
 }
 
-func (api *PostgresqlApi) DeletePolicy(opts metav1.DeleteOptions, namespace, name string) error {
+func (api *PostgresqlApi) DeletePolicy(namespace, name string) error {
 	err := api.Client.Delete().
 		Namespace(namespace).
 		Resource(PgpolicyResourcePlural).
-		VersionedParams(&opts, scheme.ParameterCodec).
+		VersionedParams(&metav1.DeleteOptions{}, scheme.ParameterCodec).
 		Name(name).
 		Do(context.TODO()).Error()
 	return err
 }
 
 // replicas
-func (api *PostgresqlApi) GetReplica(opts metav1.GetOptions, namespace, name string) (*Pgreplica, error) {
+func (api *PostgresqlApi) GetReplica(namespace, name string) (*Pgreplica, error) {
 	result := Pgreplica{}
 	e := api.Client.Get().
 		Namespace(namespace).
 		Resource(PgreplicaResourcePlural).
 		Name(name).
-		VersionedParams(&opts, scheme.ParameterCodec).
+		VersionedParams(&metav1.GetOptions{}, scheme.ParameterCodec).
 		Do(context.TODO()).
 		Into(&result)
 	return &result, e
 }
 
-func (api *PostgresqlApi) ListReplica(opts metav1.ListOptions, namespace string) (*PgreplicaList, error) {
+func (api *PostgresqlApi) ListReplica(namespace string) (*PgreplicaList, error) {
 	result := PgreplicaList{}
 	e := api.Client.Get().
 		Namespace(namespace).
 		Resource(PgreplicaResourcePlural).
-		VersionedParams(&opts, scheme.ParameterCodec).
+		VersionedParams(&metav1.ListOptions{}, scheme.ParameterCodec).
 		Do(context.TODO()).
 		Into(&result)
 	return &result, e
 }
 
-func (api *PostgresqlApi) DeleteReplica(opts metav1.DeleteOptions, namespace, name string) error {
+func (api *PostgresqlApi) DeleteReplica(namespace, name string) error {
 	err := api.Client.Delete().
 		Namespace(namespace).
 		Resource(PgreplicaResourcePlural).
-		VersionedParams(&opts, scheme.ParameterCodec).
+		VersionedParams(&metav1.DeleteOptions{}, scheme.ParameterCodec).
 		Name(name).
 		Do(context.TODO()).Error()
 	return err
 }
 
 // tasks
-func (api *PostgresqlApi) GetTask(opts metav1.GetOptions, namespace, name string) (*Pgtask, error) {
+func (api *PostgresqlApi) GetTask(namespace, name string) (*Pgtask, error) {
 	result := Pgtask{}
 	e := api.Client.Get().
 		Namespace(namespace).
 		Resource(PgtaskResourcePlural).
 		Name(name).
-		VersionedParams(&opts, scheme.ParameterCodec).
+		VersionedParams(&metav1.GetOptions{}, scheme.ParameterCodec).
 		Do(context.TODO()).
 		Into(&result)
 	return &result, e
 }
 
-func (api *PostgresqlApi) ListTask(opts metav1.ListOptions, namespace string) (*PgtaskList, error) {
+func (api *PostgresqlApi) ListTask(namespace string) (*PgtaskList, error) {
 	result := PgtaskList{}
 	e := api.Client.Get().
 		Namespace(namespace).
 		Resource(PgtaskResourcePlural).
-		VersionedParams(&opts, scheme.ParameterCodec).
+		VersionedParams(&metav1.ListOptions{}, scheme.ParameterCodec).
 		Do(context.TODO()).
 		Into(&result)
 	return &result, e
 }
 
-func (api *PostgresqlApi) DeleteTask(opts metav1.DeleteOptions, namespace, name string) error {
+func (api *PostgresqlApi) DeleteTask(namespace, name string) error {
 	err := api.Client.Delete().
 		Namespace(namespace).
 		Resource(PgtaskResourcePlural).
-		VersionedParams(&opts, scheme.ParameterCodec).
+		VersionedParams(&metav1.DeleteOptions{}, scheme.ParameterCodec).
 		Name(name).
 		Do(context.TODO()).Error()
 	return err

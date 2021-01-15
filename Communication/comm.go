@@ -10,7 +10,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -58,18 +57,17 @@ func getCommunication(kubeconfig, kind, namespace, name string) (*Comm, error) {
 		if err != nil {
 			return nil, err
 		}
-		kibana, err := kbApi.Get(metav1.GetOptions{}, namespace, name)
+		kibana, err := kbApi.Get(namespace, name)
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println(kibana)
 		secretName = kibana.Spec.Http.Tls.Cert.Secret
 	} else if kind == es {
 		esApi, err := api.ElasticsearchAPI()
 		if err != nil {
 			return nil, err
 		}
-		elastic, err := esApi.Get(metav1.GetOptions{}, namespace, name)
+		elastic, err := esApi.Get(namespace, name)
 		if err != nil {
 			return nil, err
 		}
@@ -117,12 +115,12 @@ func getCert(k8sApi *K8s.K8sApi, kind, namespace, name, secretname string) ([]by
 	var secret *v1.Secret
 	var err error
 	if secretname != "" {
-		secret, err = k8sApi.GetSecret(metav1.GetOptions{}, namespace, secretname)
+		secret, err = k8sApi.GetSecret(namespace, secretname)
 	} else {
 		if kind == pg {
-			secret, err = k8sApi.GetSecret(metav1.GetOptions{}, namespace, "pgo.tls")
+			secret, err = k8sApi.GetSecret(namespace, "pgo.tls")
 		} else if kind == kb || kind == es {
-			secret, err = k8sApi.GetSecret(metav1.GetOptions{}, namespace, name+"-"+kind+"-http-certs-internal")
+			secret, err = k8sApi.GetSecret(namespace, name+"-"+kind+"-http-certs-internal")
 		}
 	}
 	if err != nil {

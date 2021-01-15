@@ -36,34 +36,34 @@ func NewConfigFor(kubeconfig string) (*rest.RESTClient, error) {
 	return rest.UnversionedRESTClientFor(&crdConfig)
 }
 
-func (api *ElasticsearchApi) Get(opts metav1.GetOptions, namespace, name string) (*Elasticsearch, error) {
+func (api *ElasticsearchApi) Get(namespace, name string) (*Elasticsearch, error) {
 	result := Elasticsearch{}
 	e := api.Client.Get().
 		Namespace(namespace).
 		Resource("elasticsearches").
 		Name(name).
-		VersionedParams(&opts, scheme.ParameterCodec).
+		VersionedParams(&metav1.GetOptions{}, scheme.ParameterCodec).
 		Do(context.TODO()).
 		Into(&result)
 	return &result, e
 }
 
-func (api *ElasticsearchApi) List(opts metav1.ListOptions, namespace string) (*ElasticsearchList, error) {
+func (api *ElasticsearchApi) List(namespace string) (*ElasticsearchList, error) {
 	result := ElasticsearchList{}
 	e := api.Client.Get().
 		Namespace(namespace).
 		Resource("elasticsearches").
-		VersionedParams(&opts, scheme.ParameterCodec).
+		VersionedParams(&metav1.ListOptions{}, scheme.ParameterCodec).
 		Do(context.TODO()).
 		Into(&result)
 	return &result, e
 }
 
-func (api *ElasticsearchApi) Delete(opts metav1.DeleteOptions, namespace, name string) error {
+func (api *ElasticsearchApi) Delete(namespace, name string) error {
 	err := api.Client.Delete().
 		Namespace(namespace).
 		Resource("elasticsearches").
-		VersionedParams(&opts, scheme.ParameterCodec).
+		VersionedParams(&metav1.DeleteOptions{}, scheme.ParameterCodec).
 		Name(name).
 		Do(context.TODO()).Error()
 	return err
@@ -88,7 +88,7 @@ func (api *ElasticsearchApi) WatchResources(namespace string) cache.Store {
 	esStore, esController := cache.NewInformer(
 		&cache.ListWatch{
 			ListFunc: func(lo metav1.ListOptions) (result runtime.Object, err error) {
-				return api.List(lo, namespace)
+				return api.List(namespace)
 			},
 			WatchFunc: func(lo metav1.ListOptions) (watch.Interface, error) {
 				return api.Watch(lo, namespace)
