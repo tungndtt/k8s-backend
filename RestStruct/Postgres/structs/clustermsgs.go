@@ -16,7 +16,9 @@ limitations under the License.
 */
 
 import (
-	crv1 "goclient/Postgresql"
+	crv1 "goclient/crd/Postgresql"
+
+	v1 "k8s.io/api/core/v1"
 )
 
 // ShowClusterRequest shows cluster
@@ -44,8 +46,11 @@ type ShowClusterRequest struct {
 //
 // swagger:model
 type CreateClusterRequest struct {
-	Name                string `json:"Name"`
-	Namespace           string
+	Name      string `json:"Name"`
+	Namespace string
+	// NodeAffinityType is only considered when "NodeLabel" is also set, and is
+	// either a value of "preferred" (default) or "required"
+	NodeAffinityType    crv1.NodeAffinityType
 	NodeLabel           string
 	PasswordLength      int
 	PasswordSuperuser   string
@@ -60,7 +65,7 @@ type CreateClusterRequest struct {
 	CCPImagePrefix      string
 	PGOImagePrefix      string
 	ReplicaCount        int
-	ServiceType         string
+	ServiceType         v1.ServiceType
 	MetricsFlag         bool
 	// ExporterCPULimit, if specified, is the value of the max CPU for a
 	// Crunchy Postgres Exporter sidecar container
@@ -82,12 +87,20 @@ type CreateClusterRequest struct {
 	AutofailFlag        bool
 	ArchiveFlag         bool
 	BackrestStorageType string
-	//BackrestRestoreFrom  string
+	// BackrestRestoreFrom  string
 	PgbouncerFlag bool
 	// PgBouncerReplicas represents the total number of pgBouncer pods to deploy with a
 	// PostgreSQL cluster. Only works if PgbouncerFlag is set, and if so, it must
 	// be at least 1. If 0 is passed in, it will automatically be set to 1
-	PgBouncerReplicas    int32
+	PgBouncerReplicas int32
+	// PgBouncerServiceType, if specified and if PgbouncerFlag is true, is the
+	// ServiceType to use for pgBouncer. If not set, the value is defaultd to that
+	// of the PostgreSQL cluster ServiceType.
+	PgBouncerServiceType v1.ServiceType
+	// PgBouncerTLSSecret is the name of the Secret containing the TLS keypair
+	// for enabling TLS with pgBouncer. This also requires for TLSSecret and
+	// CASecret to be set
+	PgBouncerTLSSecret   string
 	CustomConfig         string
 	StorageConfig        string
 	WALStorageConfig     string
@@ -198,6 +211,8 @@ type CreateClusterRequest struct {
 	PGDataSource crv1.PGDataSourceSpec
 	// Annotations provide any custom annotations for a cluster
 	Annotations crv1.ClusterAnnotations `json:"annotations"`
+	// Tolerations allows for the setting of Pod tolerations on Postgres instances
+	Tolerations []v1.Toleration `json:"tolerations"`
 }
 
 // CreateClusterDetail provides details about the PostgreSQL cluster that is
@@ -240,21 +255,24 @@ type CreateClusterResponse struct {
 //
 // swagger:model
 type ShowClusterService struct {
-	Name                  string `json:"Name"`
-	Data                  string `json:"Data"`
-	ClusterIP             string `json:"ClusterIP"`
-	ExternalIP            string `json:"ExternalIP"`
-	ClusterName           string `json:"ClusterName"`
-	Pgbouncer             bool   `json:"Pgbouncer"`
-	BackrePgbouncerstRepo bool   `json:"BackrestRepo"`
+	Name         string
+	Data         string
+	ClusterIP    string
+	ClusterPorts []string
+	ExternalIP   string
+	ClusterName  string
+	Pgbouncer    bool
+	BackrestRepo bool
 }
 
-const PodTypePrimary = "primary"
-const PodTypeReplica = "replica"
-const PodTypePgbouncer = "pgbouncer"
-const PodTypePgbackrest = "pgbackrest"
-const PodTypeBackup = "backup"
-const PodTypeUnknown = "unknown"
+const (
+	PodTypePrimary    = "primary"
+	PodTypeReplica    = "replica"
+	PodTypePgbouncer  = "pgbouncer"
+	PodTypePgbackrest = "pgbackrest"
+	PodTypeBackup     = "backup"
+	PodTypeUnknown    = "unknown"
+)
 
 // ShowClusterPod
 //
@@ -302,11 +320,11 @@ type ShowClusterReplica struct {
 // swagger:model
 type ShowClusterDetail struct {
 	// Defines the Cluster using a Crunchy Pgcluster crd
-	Cluster     crv1.Pgcluster          `json:"cluster"`
-	Deployments []ShowClusterDeployment `json:"Deployments"`
-	Pods        []ShowClusterPod        `json:"Pods"`
-	Services    []ShowClusterService    `json:"Services"`
-	Replicas    []ShowClusterReplica    `json:"Replicas"`
+	Cluster     crv1.Pgcluster `json:"cluster"`
+	Deployments []ShowClusterDeployment
+	Pods        []ShowClusterPod
+	Services    []ShowClusterService
+	Replicas    []ShowClusterReplica
 	Standby     bool
 }
 
@@ -315,7 +333,7 @@ type ShowClusterDetail struct {
 // swagger:model
 type ShowClusterResponse struct {
 	// results from show cluster
-	Results []ShowClusterDetail `json:"Results"`
+	Results []ShowClusterDetail
 	// status of response
 	Status
 }
@@ -349,6 +367,26 @@ const (
 	UpdateClusterAutofailDoNothing UpdateClusterAutofailStatus = iota
 	UpdateClusterAutofailEnable
 	UpdateClusterAutofailDisable
+)
+
+// UpdateClusterMetrics determines whether or not to enable/disable the metrics
+// collection sidecar in a cluster
+type UpdateClusterMetrics int
+
+const (
+	UpdateClusterMetricsDoNothing UpdateClusterMetrics = iota
+	UpdateClusterMetricsEnable
+	UpdateClusterMetricsDisable
+)
+
+// UpdateClusterPGBadger determines whether or not to enable/disable the
+// pgBadger sidecar in a cluster
+type UpdateClusterPGBadger int
+
+const (
+	UpdateClusterPGBadgerDoNothing UpdateClusterPGBadger = iota
+	UpdateClusterPGBadgerEnable
+	UpdateClusterPGBadgerDisable
 )
 
 // UpdateClusterStandbyStatus defines the types for updating the Standby status
@@ -408,6 +446,9 @@ type UpdateClusterRequest struct {
 	// ExporterMemoryRequest, if specified, is the value of how much RAM should
 	// be requested for the Crunchy Postgres Exporter instance.
 	ExporterMemoryRequest string
+	// ExporterRotatePassword, if specified, rotates the password of the metrics
+	// collection agent, i.e. the "ccp_monitoring" user.
+	ExporterRotatePassword bool
 	// CPULimit is the value of the max CPU utilization for a Pod that has a
 	// PostgreSQL cluster
 	CPULimit string
@@ -421,10 +462,24 @@ type UpdateClusterRequest struct {
 	// MemoryRequest is the value of how much RAM should be requested for
 	// deploying the PostgreSQL cluster
 	MemoryRequest string
-	Standby       UpdateClusterStandbyStatus
-	Startup       bool
-	Shutdown      bool
-	Tablespaces   []ClusterTablespaceDetail
+	// Metrics allows for the enabling/disabling of the metrics sidecar. This can
+	// cause downtime and triggers a rolling update
+	Metrics UpdateClusterMetrics
+	// PGBadger allows for the enabling/disabling of the pgBadger sidecar. This can
+	// cause downtime and triggers a rolling update
+	PGBadger UpdateClusterPGBadger
+	// ServiceType, if specified, will change the service type of a cluster.
+	ServiceType v1.ServiceType
+	Standby     UpdateClusterStandbyStatus
+	Startup     bool
+	Shutdown    bool
+	Tablespaces []ClusterTablespaceDetail
+	// Tolerations allows for the adding of Pod tolerations on a PostgreSQL
+	// cluster.
+	Tolerations []v1.Toleration `json:"tolerations"`
+	// TolerationsDelete  allows for the removal of Pod tolerations on a
+	// PostgreSQL cluster
+	TolerationsDelete []v1.Toleration `json:"tolerationsDelete"`
 }
 
 // UpdateClusterResponse ...
@@ -508,6 +563,39 @@ type ScaleQueryResponse struct {
 type ScaleDownResponse struct {
 	Results []string
 	Status
+}
+
+// ClusterScaleRequest superimposes on the legacy model of handling the ability
+// to scale up the number of instances on a cluster
+// swagger:model
+type ClusterScaleRequest struct {
+	// CCPImageTag is the image tag to use for cluster creation. If this is not
+	// provided, this defaults to what the cluster is using, which is likely
+	// the preferred behavior at this point.
+	CCPImageTag string `json:"ccpImageTag"`
+	// ClientVersion is the version of the client that is being used
+	ClientVersion string `json:"clientVersion"`
+	// Name is the name of the cluster to scale. This is set by the value in the
+	// URL
+	Name string `json:"name"`
+	// Namespace is the namespace in which the queried cluster resides.
+	Namespace string `json:"namespace"`
+	// NodeAffinityType is only considered when "NodeLabel" is also set, and is
+	// either a value of "preferred" (default) or "required"
+	NodeAffinityType crv1.NodeAffinityType
+	// NodeLabel if provided is a node label to use.
+	NodeLabel string `json:"nodeLabel"`
+	// ReplicaCount is the number of replicas to add to the cluster. This is
+	// required and should be at least 1.
+	ReplicaCount int `json:"replicaCount"`
+	// ServiceType is the kind of Service to deploy with this instance. Defaults
+	// to the value on the cluster.
+	ServiceType v1.ServiceType `json:"serviceType"`
+	// StorageConfig, if provided, specifies which of the storage configuration
+	// options should be used. Defaults to what the main cluster definition uses.
+	StorageConfig string `json:"storageConfig"`
+	// Tolerations allows for the setting of Pod tolerations on Postgres instances
+	Tolerations []v1.Toleration `json:"tolerations"`
 }
 
 // ClusterScaleResponse ...

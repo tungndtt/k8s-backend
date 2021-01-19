@@ -16,7 +16,7 @@ limitations under the License.
 */
 
 import (
-	crv1 "goclient/Postgresql"
+	crv1 "goclient/crd/Postgresql"
 )
 
 // ShowPolicyRequest ...

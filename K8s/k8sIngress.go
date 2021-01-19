@@ -32,6 +32,7 @@ func (api *K8sApi) CreateIngress(namespace, ingressName, serviceName, hostname s
 				"nginx.ingress.kubernetes.io/backend-protocol": "HTTPS",
 				"nginx.ingress.kubernetes.io/secure-backends":  "true",
 				"ingress.kubernetes.io/ssl-passthrough":        "true",
+				"kubernetes.io/ingress.class":                  "nginx",
 				"nginx.ingress.kubernetes.io/rewrite-target":   "/$1",
 			},
 		},
@@ -39,7 +40,7 @@ func (api *K8sApi) CreateIngress(namespace, ingressName, serviceName, hostname s
 			TLS: []v1.IngressTLS{
 				{
 					Hosts:      []string{hostname},
-					SecretName: serviceName + "-ingress-sercret",
+					SecretName: namespace + "-ingress-sercret",
 				},
 			},
 			Rules: []v1.IngressRule{

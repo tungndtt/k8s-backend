@@ -1,7 +1,7 @@
 package structs
 
 import (
-	crv1 "goclient/Postgresql"
+	crv1 "goclient/crd/Postgresql"
 )
 
 /*

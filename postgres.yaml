@@ -1,0 +1,19 @@
+apiVersion: operators.coreos.com/v1 
+kind: OperatorGroup 
+metadata: 
+  name: operatorgroup 
+  namespace: pgo 
+spec: 
+  targetNamespaces: 
+  - pgo 
+--- 
+apiVersion: operators.coreos.com/v1alpha1 
+kind: Subscription 
+metadata: 
+  name: my-postgresql 
+  namespace: pgo 
+spec: 
+  channel: stable 
+  name: postgresql 
+  source: operatorhubio-catalog 
+  sourceNamespace: olm

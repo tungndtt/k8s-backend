@@ -6,9 +6,13 @@ import (
 	"io/ioutil"
 	"time"
 
-	comm "goclient/Communication"
-	"goclient/K8s"
-	"goclient/RestStruct/Postgres/structs"
+	api "goclient/Api"
+	pgStructs "goclient/RestStruct/Postgres/structs"
+	"goclient/files"
+	_ "goclient/internal"
+	esSvc "goclient/internal/elasticsearch"
+	kbSvc "goclient/internal/kibana"
+	pgSvc "goclient/internal/postgres"
 )
 
 func main() {
@@ -23,34 +27,21 @@ func main() {
 		}
 		flag.Parse()
 	*/
-	kibanaCRDTest()
+	elasticApiTest()
 }
 
 // test kibana api
 func kibanaApiTest() {
-	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
-	k8sApi, err := api.K8sAPI()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
+	api := api.Api{Kubeconfig: "/home/tung/.kube/config"}
+	k8sApi, _ := api.K8sAPI()
+	kbApi, _ := api.KibanaAPI()
 	ns, name := "default", "mybu"
-
-	comm, err := api.GetCommunication("kb", ns, name)
-
+	svc, err := kbSvc.GetKibanaService(k8sApi, kbApi, ns, name)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	secret, err := k8sApi.GetSecret(ns, "wibu-es-elastic-user")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	username := "elastic"
-	password := string(secret.Data[username])
 	_ = []byte(`{
 		"id": "marketing",
 		"name": "Marketing",
@@ -60,8 +51,7 @@ func kibanaApiTest() {
 		"disabledFeatures": ["updated"],
 		"imageUrl": ""
 	}`)
-	resp, err := comm.GetSpace(username, password, "marketing")
-
+	resp, err := svc.Comm.GetFeatures()
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -71,29 +61,17 @@ func kibanaApiTest() {
 
 // test elasticsearch api
 func elasticApiTest() {
-	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
-	k8sApi, err := api.K8sAPI()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	api := api.Api{Kubeconfig: "/home/tung/.kube/config"}
+	k8sApi, _ := api.K8sAPI()
+	esApi, _ := api.ElasticsearchAPI()
 	ns, name := "default", "wibu"
-	comm, err := api.GetCommunication("es", ns, name)
-
+	svc, err := esSvc.GetElasticsearchService(k8sApi, esApi, ns, name)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	secret, err := k8sApi.GetSecret(ns, "wibu-es-elastic-user")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	username := "elastic"
-	password := string(secret.Data[username])
-
-	resp, err := comm.GetConnection(username, password)
+	resp, err := svc.ExecuteCustomAction("ACTION_GET_CONNECTION", []byte("test"))
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -103,22 +81,29 @@ func elasticApiTest() {
 
 // test postgresql api
 func postgresApiTest() {
-	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
-
-	ns := "pgo"
-	comm, err := api.GetCommunication("pg", ns, "postgres-operator")
+	api := api.Api{Kubeconfig: "/home/tung/.kube/config"}
+	k8sApi, _ := api.K8sAPI()
+	pgApi, _ := api.PostgresqlAPI()
+	ns, name := "pgo", "postgres-operator"
+	svc, err := pgSvc.GetPostgresService(k8sApi, pgApi, ns, name)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	username, password := "admin", "examplepassword"
-	req := structs.ShowClusterRequest{
+	_ = pgStructs.ShowClusterRequest{
 		Namespace:     "pgo",
 		ClientVersion: "4.5.1",
 		AllFlag:       true,
 	}
-	resp, err := comm.ShowClusters(username, password, req)
+	/*
+		Namespace:     "default",
+		ClientVersion: "4.5.1",
+		Name:          "a_test_cluster",
+		Username:      "tung",
+		Password:      "tung",
+	*/
+	resp, err := svc.Comm.GetVersion()
 
 	if err != nil {
 		fmt.Println(err)
@@ -130,7 +115,7 @@ func postgresApiTest() {
 
 // test kibana crd tracking api
 func kibanaCRDTest() {
-	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
+	api := api.Api{Kubeconfig: "/home/tung/.kube/config"}
 	kbApi, err := api.KibanaAPI()
 	if err != nil {
 		fmt.Println(err)
@@ -153,7 +138,7 @@ func kibanaCRDTest() {
 
 // test elasticsearch crd tracking api
 func elasticCRDTest() {
-	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
+	api := api.Api{Kubeconfig: "/home/tung/.kube/config"}
 	esApi, err := api.ElasticsearchAPI()
 	if err != nil {
 		fmt.Println(err)
@@ -180,13 +165,13 @@ func GenerateKubeconfigTest() {
 	token := "eyJhbGciOiJSUzI1NiIsImtpZCI6IkROekxPY2NiVjA4UTljeVhnM0tOenZPNU5RUVlkbUlvNDV1WmJuNG1KME0ifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJsb2wiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlY3JldC5uYW1lIjoiYnVpbGQtcm9ib3QtdG9rZW4tcWtiengiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoiYnVpbGQtcm9ib3QiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiIzZjhkOWQ4Ny04Njk2LTQ5NzYtOGM1MS0wY2FjODM0OTkwZTUiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6bG9sOmJ1aWxkLXJvYm90In0.DmfcKUqW7sH8OVHM8YJjerLbqj2HdCqo-_37Kpv-5_AIkr10Zp4dQDUyrC0VQ2C8P6dlh5lEEDNpHofS7W33DXpmb-jzqGF8ETQB_XQJDosor7hzm7UGsBCz7A2U7Fp8H-CFwFAMae0M_Lna1Rsz9F6587VXZJuUlDZqL7RVu2UvJuf4vksJ0Ht0leYL4N5dtR5kwySGvM9CUUpuJvEudIHbcSjDB1h55rOSPH4DlxZFjXtX028Xv1SBzdt9IOIkVJ5ZfXZRjiCHanIRKRrrCjIkEvWybKfNpVhRT_eQ0JshtSngJKHwhR72OHMtgZG4Kf-mcKDSiidytRy9vcok1Q"
 	user := "build-robot"
 
-	err := K8s.GenerateKubeconfig(token, user)
+	err := files.GenerateKubeconfig(token, user)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	api := comm.Api{Kubeconfig: "kubeconfig.yaml"}
+	api := api.Api{Kubeconfig: "./files/kubeconfig.yaml"}
 	k8sApi, err := api.K8sAPI()
 	if err != nil {
 		fmt.Println(err)
@@ -194,7 +179,7 @@ func GenerateKubeconfigTest() {
 	}
 
 	// test whether can get service from namespace default
-	list, err := k8sApi.PollServices("default")
+	list, err := k8sApi.PollServices("lol")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -202,21 +187,20 @@ func GenerateKubeconfigTest() {
 	for _, svc := range list.Items {
 		fmt.Println(svc)
 	}
-
 }
 
 func ScaleTest() {
-	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
+	api := api.Api{Kubeconfig: "/home/tung/.kube/config"}
 	k8sApi, _ := api.K8sAPI()
 	scale, _ := k8sApi.GetStatefulSetScale("default", "wibu-es-ganmo")
 	fmt.Println(scale)
 }
 
 func IngressTest() {
-	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
+	api := api.Api{Kubeconfig: "/home/tung/.kube/config"}
 	k8sApi, _ := api.K8sAPI()
-	ns := "default"
-	err := k8sApi.AddServiceToIngress(ns, ns+"-ingress", "wibu-es-http", "ganmo.com", 9200)
+	ns, name, kind := "pgo", "postgres-operator", "pg"
+	err := k8sApi.AddServiceToIngress(ns, ns+"-ingress", fmt.Sprintf("%s-%s-http", name, kind), "ganmo.com", 8443)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -229,7 +213,7 @@ func IngressTest() {
 }
 
 func CreateKibanaTest() {
-	api := comm.Api{Kubeconfig: "/home/tung/.kube/config"}
+	api := api.Api{Kubeconfig: "/home/tung/.kube/config"}
 	k8sApi, _ := api.K8sAPI()
 	_, err := k8sApi.ApplyFile("kibana.yaml", "apply")
 	if err != nil {

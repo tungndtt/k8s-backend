@@ -5,29 +5,29 @@ var (
 	space    string = "api/spaces/space"
 )
 
-func (comm *Comm) GetFeatures(username, password string) (string, error) {
-	return stringifyResponse(comm.Curl(kb, username, password, features, "GET", nil))
+func (comm *Comm) GetFeatures() (string, error) {
+	return stringifyResponse(comm.Curl(kb, features, "GET", nil))
 }
 
-func (comm *Comm) CreateSpace(username, password string, data []byte) (string, error) {
-	return stringifyResponse(comm.Curl(kb, username, password, space, "POST", data))
+func (comm *Comm) CreateSpace(data []byte) (string, error) {
+	return stringifyResponse(comm.Curl(kb, space, "POST", data))
 }
 
-func (comm *Comm) UpdateSpace(username, password string, id string, data []byte) (string, error) {
+func (comm *Comm) UpdateSpace(id string, data []byte) (string, error) {
 	path := space + "/" + id
-	return stringifyResponse(comm.Curl(kb, username, password, path, "PUT", data))
+	return stringifyResponse(comm.Curl(kb, path, "PUT", data))
 }
 
-func (comm *Comm) DeleteSpace(username, password, id string) (string, error) {
+func (comm *Comm) DeleteSpace(id string) (string, error) {
 	path := space + "/" + id
-	return stringifyResponse(comm.Curl(kb, username, password, path, "DELETE", nil))
+	return stringifyResponse(comm.Curl(kb, path, "DELETE", nil))
 }
 
-func (comm *Comm) GetSpace(username, password, id string) (string, error) {
+func (comm *Comm) GetSpace(id string) (string, error) {
 	path := space + "/" + id
-	return stringifyResponse(comm.Curl(kb, username, password, path, "GET", nil))
+	return stringifyResponse(comm.Curl(kb, path, "GET", nil))
 }
 
-func (comm *Comm) GetAllSpace(username, password string) (string, error) {
-	return stringifyResponse(comm.Curl(kb, username, password, space, "GET", nil))
+func (comm *Comm) GetAllSpace() (string, error) {
+	return stringifyResponse(comm.Curl(kb, space, "GET", nil))
 }

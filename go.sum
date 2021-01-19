@@ -41,6 +41,9 @@ github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWR
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=
 github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
+github.com/crunchydata/postgres-operator v1.3.2 h1:hTPKWR3Gw9VFpQ+g5L1TLdv4kSQ5pVBjFpHYHgRZt5I=
+github.com/crunchydata/postgres-operator v4.5.1+incompatible h1:zM8goMWCNmwbAn6e4DvykD4SQBPbn3G0id+Vx1UBgZY=
+github.com/crunchydata/postgres-operator v4.5.1+incompatible/go.mod h1:oFjQzSNSrG0cUtqahIQDPO32bqCbg3hpwOMVJofNSyM=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

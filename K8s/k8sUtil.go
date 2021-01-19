@@ -173,12 +173,20 @@ func (api *K8sApi) CreateSecret(namespace, name string, cert, key []byte) (*v1.S
 			Namespace: namespace,
 		},
 		Data: map[string][]byte{
-			"tls.cert": cert,
-			"tls.key":  key,
+			"tls.crt": cert,
+			"tls.key": key,
 		},
-		Type: "Opaque",
+		Type: "kubernetes.io/tls",
 	}
 	return api.ClientSet.CoreV1().Secrets(namespace).Create(context.TODO(), &new_secret, metav1.CreateOptions{})
+}
+
+func (api *K8sApi) GetCert(namespace, secretname string) ([]byte, []byte, error) {
+	secret, err := api.GetSecret(namespace, secretname)
+	if err != nil {
+		return nil, nil, err
+	}
+	return secret.Data["tls.crt"], secret.Data["tls.key"], nil
 }
 
 func (api *K8sApi) CreateServiceAccount(namespace, name string) (*v1.ServiceAccount, error) {

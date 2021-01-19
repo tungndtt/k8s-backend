@@ -25,7 +25,7 @@ import (
 	"strings"
 	"text/template"
 
-	crv1 "goclient/Postgresql"
+	crv1 "goclient/crd/Postgresql"
 
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"

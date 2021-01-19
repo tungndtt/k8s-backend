@@ -15,7 +15,7 @@ func GetRbacClient(config *rest.Config) (*rbac.RbacV1Client, error) {
 	return rbac.NewForConfig(config)
 }
 
-func (auth *K8sApi) CreateRoleBinding(opts metav1.CreateOptions, namespace, name, rolename string, account_namespace, account_name []string) (*rbacV1.RoleBinding, error) {
+func (auth *K8sApi) CreateRoleBinding(namespace, name, rolename string, account_namespace, account_name []string) (*rbacV1.RoleBinding, error) {
 	subjects := []rbacV1.Subject{}
 	for i := 0; i < len(account_name); i++ {
 		subjects = append(
@@ -43,10 +43,10 @@ func (auth *K8sApi) CreateRoleBinding(opts metav1.CreateOptions, namespace, name
 		},
 		Subjects: subjects,
 	}
-	return auth.RbacClient.RoleBindings(namespace).Create(context.TODO(), &new, opts)
+	return auth.RbacClient.RoleBindings(namespace).Create(context.TODO(), &new, metav1.CreateOptions{})
 }
 
-func (auth *K8sApi) CreateRole(opts metav1.CreateOptions, namespace, name string, apiGroups, resources, verbs [][]string) (*rbacV1.Role, error) {
+func (auth *K8sApi) CreateRole(namespace, name string, apiGroups, resources, verbs [][]string) (*rbacV1.Role, error) {
 	rules := []rbacV1.PolicyRule{}
 	for i := 0; i < len(verbs); i++ {
 		rules = append(
@@ -69,7 +69,7 @@ func (auth *K8sApi) CreateRole(opts metav1.CreateOptions, namespace, name string
 		},
 		Rules: rules,
 	}
-	return auth.RbacClient.Roles(namespace).Create(context.TODO(), &new, opts)
+	return auth.RbacClient.Roles(namespace).Create(context.TODO(), &new, metav1.CreateOptions{})
 }
 
 func (auth *K8sApi) GetRoleBinding(namespace, name string) (*rbacV1.RoleBinding, error) {
@@ -80,7 +80,7 @@ func (auth *K8sApi) GetRole(namespace, name string) (*rbacV1.Role, error) {
 	return auth.RbacClient.Roles(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }
 
-func (auth *K8sApi) AddUserTo(old *rbacV1.RoleBinding, namespace, name, apiGroup string) error {
+func (auth *K8sApi) AddUserTo(old *rbacV1.RoleBinding, namespace, name string) error {
 	new := rbacV1.RoleBinding{
 		TypeMeta: old.TypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
@@ -91,7 +91,15 @@ func (auth *K8sApi) AddUserTo(old *rbacV1.RoleBinding, namespace, name, apiGroup
 		Subjects: old.Subjects,
 		RoleRef:  old.RoleRef,
 	}
-	new.Subjects = append(new.Subjects, rbacV1.Subject{Kind: "ServiceAccount", APIGroup: apiGroup, Name: name, Namespace: namespace})
+	new.Subjects = append(
+		new.Subjects,
+		rbacV1.Subject{
+			Kind:      "ServiceAccount",
+			APIGroup:  "rbac.authorization.k8s.io",
+			Name:      name,
+			Namespace: namespace,
+		},
+	)
 	_, err := auth.RbacClient.RoleBindings(namespace).Update(context.TODO(), &new, metav1.UpdateOptions{})
 	if err != nil {
 		logrus.Error(err)
