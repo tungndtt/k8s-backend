@@ -36,11 +36,7 @@ func kibanaApiTest() {
 	k8sApi, _ := api.K8sAPI()
 	kbApi, _ := api.KibanaAPI()
 	ns, name := "default", "mybu"
-	svc, err := kbSvc.GetKibanaService(k8sApi, kbApi, ns, name)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	svc, _ := kbSvc.GetKibanaService(k8sApi, kbApi, ns, name)
 
 	_ = []byte(`{
 		"id": "marketing",
@@ -51,7 +47,7 @@ func kibanaApiTest() {
 		"disabledFeatures": ["updated"],
 		"imageUrl": ""
 	}`)
-	resp, err := svc.Comm.GetFeatures()
+	resp, err := svc.ExecuteCustomAction("ACTION_GET_FEATURES", []byte(`Get all features`))
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -65,11 +61,7 @@ func elasticApiTest() {
 	k8sApi, _ := api.K8sAPI()
 	esApi, _ := api.ElasticsearchAPI()
 	ns, name := "default", "wibu"
-	svc, err := esSvc.GetElasticsearchService(k8sApi, esApi, ns, name)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	svc, _ := esSvc.GetElasticsearchService(k8sApi, esApi, ns, name)
 
 	resp, err := svc.ExecuteCustomAction("ACTION_GET_CONNECTION", []byte("test"))
 	if err != nil {
@@ -85,7 +77,8 @@ func postgresApiTest() {
 	k8sApi, _ := api.K8sAPI()
 	pgApi, _ := api.PostgresqlAPI()
 	ns, name := "pgo", "postgres-operator"
-	svc, err := pgSvc.GetPostgresService(k8sApi, pgApi, ns, name)
+	_, err := pgSvc.GetPostgresService(k8sApi, pgApi, ns, name)
+
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -96,6 +89,8 @@ func postgresApiTest() {
 		ClientVersion: "4.5.1",
 		AllFlag:       true,
 	}
+
+	//service.ExecuteCustomAction()
 	/*
 		Namespace:     "default",
 		ClientVersion: "4.5.1",
@@ -103,14 +98,17 @@ func postgresApiTest() {
 		Username:      "tung",
 		Password:      "tung",
 	*/
-	resp, err := svc.Comm.GetVersion()
 
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	/*
+		comm, err := svc.
 
-	fmt.Println(*resp)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		fmt.Println(*resp)
+	*/
 }
 
 // test kibana crd tracking api

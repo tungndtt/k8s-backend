@@ -150,6 +150,10 @@ func (api *K8sApi) GetStatefulset(namespace, name string) (*appV1.StatefulSet, e
 	return api.ClientSet.AppsV1().StatefulSets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }
 
+func (api *K8sApi) GetDeployment(namespace, name string) (*appV1.Deployment, error) {
+	return api.ClientSet.AppsV1().Deployments(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+}
+
 func (api *K8sApi) GetSecret(namespace, name string) (*v1.Secret, error) {
 	return api.ClientSet.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 }
@@ -215,8 +219,12 @@ func (api *K8sApi) PollReplicaSets(namespace string) (*appV1.ReplicaSetList, err
 	return api.ClientSet.AppsV1().ReplicaSets(namespace).List(context.TODO(), metav1.ListOptions{})
 }
 
-func (api *K8sApi) PollStatefulset(opts metav1.ListOptions, namespace string) (*appV1.StatefulSetList, error) {
+func (api *K8sApi) PollStatefulsets(namespace string) (*appV1.StatefulSetList, error) {
 	return api.ClientSet.AppsV1().StatefulSets(namespace).List(context.TODO(), metav1.ListOptions{})
+}
+
+func (api *K8sApi) PollDeployments(namespace string) (*appV1.DeploymentList, error) {
+	return api.ClientSet.AppsV1().Deployments(namespace).List(context.TODO(), metav1.ListOptions{})
 }
 
 func (api *K8sApi) PollServiceAccounts(namespace string) (*v1.ServiceAccountList, error) {
