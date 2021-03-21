@@ -43,6 +43,7 @@ func (service *ElasticsearchService) getCommunication(namespace, name string) (*
 	secretName := elastic.Spec.Http.Tls.Cert.Secret
 	client := &http.Client{}
 	if len(secretName) > 0 {
+		fmt.Println(secretName)
 		cert, key, err := service.K8sApi.GetCert(namespace, secretName)
 		if err != nil {
 			return nil, err

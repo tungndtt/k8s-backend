@@ -69,6 +69,18 @@ func (api *KibanaApi) Delete(namespace, name string) error {
 	return err
 }
 
+func (api *KibanaApi) Update(namespace, name string, other *Kibana) error {
+	err := api.Client.Put().
+		Namespace(namespace).
+		Resource("kibanas").
+		Name(name).
+		VersionedParams(&metav1.UpdateOptions{}, scheme.ParameterCodec).
+		Body(other).
+		Do(context.TODO()).
+		Error()
+	return err
+}
+
 // following methods maybe needed
 func (api *KibanaApi) Watch(opts metav1.ListOptions, namespace string) (watch.Interface, error) {
 	var timeout time.Duration

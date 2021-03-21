@@ -69,6 +69,18 @@ func (api *ElasticsearchApi) Delete(namespace, name string) error {
 	return err
 }
 
+func (api *ElasticsearchApi) Update(namespace, name string, other *Elasticsearch) error {
+	err := api.Client.Put().
+		Namespace(namespace).
+		Resource("elasticsearches").
+		Name(name).
+		VersionedParams(&metav1.UpdateOptions{}, scheme.ParameterCodec).
+		Body(other).
+		Do(context.TODO()).
+		Error()
+	return err
+}
+
 // following methods maybe needed
 func (api *ElasticsearchApi) Watch(opts metav1.ListOptions, namespace string) (watch.Interface, error) {
 	var timeout time.Duration

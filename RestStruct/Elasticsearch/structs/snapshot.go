@@ -1,13 +1,18 @@
 package structs
 
 type CreateSnapshot struct {
-	Ignore_Unavailable   bool   `json:"ignore_unavailable"`
-	Indices              string `json:"indices"`
-	Include_Global_State bool   `json:"include_global_state"`
-	Master_Timeout       string `json:"master_timeout"`
-	Metadata             string `json:"metadata"`
-	Partial              bool   `json:"partial"`
-	Wait_For_Completion  bool   `json:"wait_for_completion"`
+	Ignore_Unavailable   bool     `json:"ignore_unavailable"`
+	Indices              string   `json:"indices"`
+	Include_Global_State bool     `json:"include_global_state"`
+	Master_Timeout       string   `json:"master_timeout"`
+	Metadata             Metadata `json:"metadata"`
+	Partial              bool     `json:"partial"`
+	Wait_For_Completion  bool     `json:"wait_for_completion"`
+}
+
+type Metadata struct {
+	Taken_By      string `json:"taken_by"`
+	Taken_Because string `json:"taken_because"`
 }
 
 type GetSnapshot struct {

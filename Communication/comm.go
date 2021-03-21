@@ -10,7 +10,7 @@ import (
 
 var (
 	// server host url
-	url string = "ganmo.com"
+	url string = "k8s.sep.evoila.digital"
 
 	// kinds
 	kb string = "kb"

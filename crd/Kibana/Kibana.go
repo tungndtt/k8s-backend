@@ -44,7 +44,7 @@ type Http struct {
 
 type TLS struct {
 	Cert           Certificate           `json:"certificate,omitempty"`
-	SelfSignedCert SelfSignedCertificate `json:"selfSignedCertificate,omitempty"`
+	SelfSignedCert *SelfSignedCertificate `json:"selfSignedCertificate,omitempty"`
 }
 
 type Certificate struct {

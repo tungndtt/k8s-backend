@@ -3,8 +3,8 @@ package Elasticsearch
 import "goclient/RestStruct/Elasticsearch/structs"
 
 type CreateSnapshotRequest struct {
-	My_Repo     string `json:"my_repositoriy"`
-	My_Snapshot string `json:"my_snapshot"`
+	My_Repo     string
+	My_Snapshot string
 	structs.CreateSnapshot
 }
 

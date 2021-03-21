@@ -185,6 +185,42 @@ func (api *K8sApi) CreateSecret(namespace, name string, cert, key []byte) (*v1.S
 	return api.ClientSet.CoreV1().Secrets(namespace).Create(context.TODO(), &new_secret, metav1.CreateOptions{})
 }
 
+func (api *K8sApi) CreateTlsSecret(namespace, ownerName, kind, apiVersion, uid string, tlsCert map[string][]byte) (string, error) {
+	secretName := ownerName + "-tls-cert"
+	_ = api.ClientSet.CoreV1().Secrets(namespace).Delete(context.TODO(), secretName, metav1.DeleteOptions{})
+	True := true
+	secret := &v1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Secret",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion:         apiVersion,
+					Name:               ownerName,
+					Kind:               kind,
+					Controller:         &True,
+					BlockOwnerDeletion: &True,
+					UID:                types.UID(uid),
+				},
+			},
+		},
+		Data: map[string][]byte{
+			"ca.crt":  tlsCert["ca.crt"],
+			"tls.crt": tlsCert["tls.crt"],
+			"tls.key": tlsCert["tls.key"],
+		},
+		Type: "Opaque",
+	}
+	if _, err := api.ClientSet.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{}); err != nil {
+		return "", err
+	}
+	return secretName, nil
+}
+
 func (api *K8sApi) GetCert(namespace, secretname string) ([]byte, []byte, error) {
 	secret, err := api.GetSecret(namespace, secretname)
 	if err != nil {

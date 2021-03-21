@@ -98,13 +98,13 @@ func (api *K8sApi) DeleteServiceFromIngress(namespace, ingressName, serviceName 
 	if err != nil {
 		return err
 	}
-	l := len(ingress.Spec.Rules)
+	l := len(ingress.Spec.Rules[0].HTTP.Paths)
 	if l > 1 {
 		fmt.Println(ingress.Spec.Rules[0].HTTP.Paths)
 		for i, path := range ingress.Spec.Rules[0].HTTP.Paths {
 			if path.Backend.ServiceName == serviceName {
 				ingress.Spec.Rules[0].HTTP.Paths[i] = ingress.Spec.Rules[0].HTTP.Paths[l-1]
-				ingress.Spec.Rules[0].HTTP.Paths = ingress.Spec.Rules[0].HTTP.Paths[:l]
+				ingress.Spec.Rules[0].HTTP.Paths = ingress.Spec.Rules[0].HTTP.Paths[:l-1]
 				break
 			}
 		}

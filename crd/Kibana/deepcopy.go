@@ -58,7 +58,7 @@ func (in *Http) DeepCopyInto(out *Http) {
 
 func (in *TLS) DeepCopyInto(out *TLS) {
 	out.Cert = Certificate{in.Cert.Secret}
-	in.SelfSignedCert.DeepCopyInto(&out.SelfSignedCert)
+	in.SelfSignedCert.DeepCopyInto(out.SelfSignedCert)
 }
 
 func (in *SelfSignedCertificate) DeepCopyInto(out *SelfSignedCertificate) {

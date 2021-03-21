@@ -7,6 +7,7 @@ import (
 )
 
 var (
+	repository        string = "_snapshot/%s"
 	createSnapshot    string = "_snapshot/%s/%s"
 	getSnapshot       string = "_snapshot/%s/%s"
 	getSnapshotStatus string = "_snapshot/%s/%s/_status"
@@ -16,6 +17,20 @@ var (
 
 func (comm *Comm) GetConnection() (string, error) {
 	return stringifyResponse(comm.Curl(es, "", "GET", nil))
+}
+
+func (comm *Comm) CreateRepository(request forms.RepoDto) (string, error) {
+	data, err := json.Marshal(request.Body)
+	if err != nil {
+		return "", err
+	}
+	path := fmt.Sprintf(repository, request.Repository)
+	return stringifyResponse(comm.Curl(es, path, "POST", data))
+}
+
+func (comm *Comm) GetRepository(request forms.RepoDto) (string, error) {
+	path := fmt.Sprintf(repository, request.Repository)
+	return stringifyResponse(comm.Curl(es, path, "GET", nil))
 }
 
 func (comm *Comm) CreateSnapshot(request forms.CreateSnapshotRequest) (string, error) {
